@@ -1,0 +1,22 @@
+{
+  "name": "formloom",
+  "private": true,
+  "packageManager": "pnpm@9.11.0",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "typecheck": "turbo run typecheck",
+    "publish-packages": "pnpm build && pnpm -r --filter './packages/*' publish"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "tsup": "^8.3.0"
+  }
+}

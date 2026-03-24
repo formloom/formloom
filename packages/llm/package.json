@@ -1,0 +1,45 @@
+{
+  "name": "@formloom/llm",
+  "version": "0.1.0",
+  "description": "LLM integration layer for Formloom - prompt fragments and tool definitions",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist .turbo"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/formloom/formloom.git",
+    "directory": "packages/llm"
+  },
+  "homepage": "https://github.com/formloom/formloom/tree/main/packages/llm#readme",
+  "bugs": {
+    "url": "https://github.com/formloom/formloom/issues"
+  },
+  "dependencies": {
+    "@formloom/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0"
+  }
+}
