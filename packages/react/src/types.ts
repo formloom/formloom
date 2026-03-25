@@ -32,19 +32,31 @@ export interface UseFormloomReturn {
   fields: FieldProps[];
   getField: (id: string) => FieldProps | undefined;
   data: FormloomData;
+  /**
+   * True when all fields would pass validation right now (eager, not just
+   * touched fields). Use this to gate submit buttons or show completion
+   * indicators. On a fresh form with required fields this is false.
+   */
   isValid: boolean;
   isDirty: boolean;
-  handleSubmit: () => void;
+  /**
+   * True while an async onSubmit handler is in-flight.
+   * Use this to disable the submit button and show loading state.
+   */
+  isSubmitting: boolean;
+  handleSubmit: () => Promise<void>;
   reset: () => void;
   errors: Array<{ fieldId: string; message: string }>;
 }
 
 /**
  * Options passed to useFormloom hook.
+ * initialValues are only read on mount — passing a new object reference
+ * on re-render does not reset the form (same semantics as useState initialiser).
  */
 export interface UseFormloomOptions {
   schema: FormloomSchema;
-  onSubmit: (data: FormloomData) => void;
+  onSubmit: (data: FormloomData) => void | Promise<void>;
   onError?: (errors: Array<{ fieldId: string; message: string }>) => void;
   initialValues?: Partial<FormloomData>;
 }

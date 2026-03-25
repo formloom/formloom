@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import type { FormloomData, FormField } from "@formloom/schema";
 import type {
   UseFormloomReturn,
@@ -7,12 +7,16 @@ import type {
 } from "./types";
 
 export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
-  const { schema, onSubmit, onError, initialValues } = options;
+  const { schema, onSubmit, onError } = options;
+
+  // Capture initialValues on mount only. Passing a new object reference on
+  // re-render must not reset the form — same semantics as useState initialiser.
+  const initialValuesRef = useRef(options.initialValues);
 
   const defaultValues = useMemo(() => {
     const defaults: FormloomData = {};
     for (const field of schema.fields) {
-      const override = initialValues?.[field.id];
+      const override = initialValuesRef.current?.[field.id];
       if (override !== undefined) {
         defaults[field.id] = override;
       } else if ("defaultValue" in field && field.defaultValue !== undefined) {
@@ -22,7 +26,7 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
       }
     }
     return defaults;
-  }, [schema, initialValues]);
+  }, [schema]);
 
   const [values, setValues] = useState<FormloomData>(() => ({
     ...defaultValues,
@@ -31,6 +35,7 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
   const [errors, setErrors] = useState<Record<string, string | null>>(
     () => ({}),
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateField = useCallback(
     (field: FormField, value: unknown): string | null => {
@@ -52,7 +57,7 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
             return v.patternMessage || `${field.label} format is invalid`;
           }
         } catch {
-          // Invalid regex in schema - skip
+          // Invalid regex in schema — skip silently
         }
       }
 
@@ -69,11 +74,22 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
     return newErrors;
   }, [schema, values, validateField]);
 
+  // Eagerly compute whether the form would pass full validation right now,
+  // without affecting any visible error state. This means isValid is false on
+  // a fresh form that has required empty fields, which is the correct default
+  // for gating submit buttons.
+  const isValid = useMemo(() => {
+    for (const field of schema.fields) {
+      if (validateField(field, values[field.id]) !== null) return false;
+    }
+    return true;
+  }, [schema.fields, values, validateField]);
+
   const handleChange = useCallback(
     (fieldId: string, value: string | boolean | string[] | null) => {
       setValues((prev) => ({ ...prev, [fieldId]: value }));
 
-      // Re-validate if already touched
+      // Re-validate only if the field has already been touched
       setTouched((currentTouched) => {
         if (currentTouched[fieldId]) {
           const field = schema.fields.find((f) => f.id === fieldId);
@@ -131,7 +147,8 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
     [fields],
   );
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async (): Promise<void> => {
+    // Mark every field as touched so errors become visible
     const allTouched: Record<string, boolean> = {};
     for (const field of schema.fields) {
       allTouched[field.id] = true;
@@ -153,7 +170,12 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
       return;
     }
 
-    onSubmit(values);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(values);
+    } finally {
+      setIsSubmitting(false);
+    }
   }, [schema, values, validateAll, onSubmit, onError]);
 
   const reset = useCallback(() => {
@@ -169,7 +191,6 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
     }
   }
 
-  const isValid = currentErrors.length === 0;
   const isDirty = Object.values(touched).some(Boolean);
 
   return {
@@ -179,15 +200,14 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
     data: values,
     isValid,
     isDirty,
+    isSubmitting,
     handleSubmit,
     reset,
     errors: currentErrors,
   };
 }
 
-function getEmptyValue(
-  field: FormField,
-): string | boolean | string[] | null {
+function getEmptyValue(field: FormField): string | boolean | string[] | null {
   switch (field.type) {
     case "boolean":
       return false;
