@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Version or publish
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Needed for the action to open/update the "Version Packages" PR and
+      # push back to main with an empty-changesets no-op commit.
+      contents: write
+      pull-requests: write
+      # Required for npm provenance via GitHub Actions OIDC. The published
+      # tarball is cryptographically linked to this commit.
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the changesets action can compare against previous tags.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build + test before anything else, so a publishable PR only opens when
+      # `main` is in a green state.
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+
+      - name: Create Release PR or publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # `pnpm release` runs `pnpm build && changeset publish`. The action
+          # invokes this only when there are no pending changesets — i.e. after
+          # the "Version Packages" PR has merged.
+          publish: pnpm release
+          # `pnpm version-packages` runs `changeset version` — consumed by the
+          # action to generate the "Version Packages" PR.
+          version: pnpm version-packages
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          # Prefer CHANGESETS_TOKEN (a fine-grained PAT or GitHub App token)
+          # when the org/repo locks down the default GITHUB_TOKEN permissions.
+          # Falls back to the default token when the repo allows write + PR
+          # creation on its own.
+          GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN || secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Enables `npm publish --provenance` under the hood for every package
+          # that the action publishes.
+          NPM_CONFIG_PROVENANCE: "true"

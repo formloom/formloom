@@ -1,0 +1,48 @@
+name: Feature request
+description: Propose a new capability or a change to an existing one
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open a feature request before opening a PR. Alignment saves churn.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do? What's blocking you today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        Sketch the API or behaviour you have in mind. If you have alternatives
+        in mind, list them — tradeoffs are easier to evaluate than a single option.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Which packages does this touch?
+      description: e.g. `@formloom/schema` (new field type) and `@formloom/react` (renderer support)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Prior art, related issues, concerns about backward compatibility.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and did not find this proposal.
+          required: true

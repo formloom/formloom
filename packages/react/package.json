@@ -1,7 +1,10 @@
 {
   "name": "@formloom/react",
   "version": "0.1.0",
-  "description": "Headless React hooks for rendering Formloom schemas",
+  "description": "Headless React hooks for rendering Formloom schemas — visibility, sections, async validators, file handling",
+  "license": "MIT",
+  "author": "Formloom contributors",
+  "keywords": ["form", "react", "hook", "llm", "ai", "headless", "formloom"],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

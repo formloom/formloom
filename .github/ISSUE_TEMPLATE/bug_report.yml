@@ -1,0 +1,61 @@
+name: Bug report
+description: Something that used to work, or should work by the docs, is broken
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing. Please fill in every section — vague reports get closed.
+
+  - type: input
+    id: package
+    attributes:
+      label: Which package?
+      description: e.g. `@formloom/react@0.2.0`
+      placeholder: "@formloom/react@0.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Node / pnpm / framework versions
+      description: e.g. "Node 22.3.0, pnpm 9.11.0, React 19.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect vs what did you observe?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Minimal, runnable repro. A small code block is fine; a link to a
+        [StackBlitz](https://stackblitz.com) or a minimal repo is even better.
+      render: ts
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output
+      description: Stack traces, validator errors, console logs — paste them.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and did not find this one.
+          required: true
+        - label: I'm on the latest release of the affected package.
+          required: true

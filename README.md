@@ -1,5 +1,12 @@
 # Formloom
 
+[![CI](https://github.com/formloom/formloom/actions/workflows/ci.yml/badge.svg)](https://github.com/formloom/formloom/actions/workflows/ci.yml)
+[![npm @formloom/schema](https://img.shields.io/npm/v/@formloom/schema.svg?label=%40formloom%2Fschema)](https://www.npmjs.com/package/@formloom/schema)
+[![npm @formloom/llm](https://img.shields.io/npm/v/@formloom/llm.svg?label=%40formloom%2Fllm)](https://www.npmjs.com/package/@formloom/llm)
+[![npm @formloom/react](https://img.shields.io/npm/v/@formloom/react.svg?label=%40formloom%2Freact)](https://www.npmjs.com/package/@formloom/react)
+[![npm @formloom/zod](https://img.shields.io/npm/v/@formloom/zod.svg?label=%40formloom%2Fzod)](https://www.npmjs.com/package/@formloom/zod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Formloom lets your LLM present a full form UI instead of asking questions one by one. It defines a minimal schema that any LLM can produce, validates it, and gives you headless hooks to render it however you want.
 
 **Instead of this:**
@@ -206,4 +213,10 @@ pnpm typecheck     # Type-check
 
 ## Contributing
 
-Contributions are welcome. Please open an issue first to discuss what you'd like to change.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, PR conventions, and how to add a changeset.
+
+Security issues: see [SECURITY.md](SECURITY.md) — please do **not** file public issues for vulnerabilities.
+
+## License
+
+[MIT](LICENSE)

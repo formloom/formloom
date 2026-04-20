@@ -2,6 +2,8 @@
   "name": "@formloom/schema",
   "version": "0.1.0",
   "description": "Schema spec and validator for Formloom - LLM-driven dynamic form generation",
+  "license": "MIT",
+  "author": "Formloom contributors",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
