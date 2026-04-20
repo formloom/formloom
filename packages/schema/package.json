@@ -1,6 +1,6 @@
 {
   "name": "@formloom/schema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Schema spec and validator for Formloom - LLM-driven dynamic form generation",
   "license": "MIT",
   "author": "Formloom contributors",
@@ -14,7 +14,9 @@
       "require": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
@@ -24,7 +26,13 @@
     "lint": "eslint src/",
     "clean": "rm -rf dist .turbo"
   },
-  "keywords": ["form", "llm", "schema", "ai", "structured-output"],
+  "keywords": [
+    "form",
+    "llm",
+    "schema",
+    "ai",
+    "structured-output"
+  ],
   "publishConfig": {
     "access": "public"
   },
