@@ -13,13 +13,18 @@ jobs:
     name: Version or publish
     runs-on: ubuntu-latest
 
+    # No `environment:` here because the npm Trusted Publisher configuration
+    # has no environment filter set. If you later switch Trusted Publisher to
+    # require an environment, add `environment: <name>` on this job AND
+    # create a matching environment under `Settings → Environments`.
+
     permissions:
       # Needed for the action to open/update the "Version Packages" PR and
-      # push back to main with an empty-changesets no-op commit.
+      # push back to main when it lands.
       contents: write
       pull-requests: write
-      # Required for npm provenance via GitHub Actions OIDC. The published
-      # tarball is cryptographically linked to this commit.
+      # Required for npm provenance via GitHub Actions OIDC AND for the
+      # Trusted Publisher auth exchange.
       id-token: write
 
     steps:
@@ -34,12 +39,16 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
+          # Writes ~/.npmrc with an _authToken placeholder that reads
+          # NODE_AUTH_TOKEN at use-time. Needed for any step that runs
+          # `npm publish` or `pnpm publish` directly.
           registry-url: "https://registry.npmjs.org"
+          scope: "@formloom"
 
       - run: pnpm install --frozen-lockfile
 
-      # Build + test before anything else, so a publishable PR only opens when
-      # `main` is in a green state.
+      # Build + test before anything else so a publishable PR only opens
+      # when `main` is in a green state.
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
@@ -63,7 +72,12 @@ jobs:
           # Falls back to the default token when the repo allows write + PR
           # creation on its own.
           GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN || secrets.GITHUB_TOKEN }}
+          # Set both NPM_TOKEN (read by changesets/action when it writes its
+          # own .npmrc) and NODE_AUTH_TOKEN (read by the .npmrc that
+          # setup-node wrote). Keeps the token path working as a fallback
+          # when Trusted Publisher OIDC can't be exchanged for any reason.
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # Enables `npm publish --provenance` under the hood for every package
-          # that the action publishes.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Enables `npm publish --provenance` under the hood for every
+          # package that the action publishes.
           NPM_CONFIG_PROVENANCE: "true"
