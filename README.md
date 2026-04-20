@@ -21,92 +21,50 @@ LLM: [receives clean { name: "Alice", email: "alice@example.com", contact: "emai
 
 ## Why Formloom?
 
-- **Better UX** — Users fill one form instead of playing 20 questions with a chatbot
-- **Structured data** — You get typed, validated data back, not free-text you need to parse
-- **LLM-friendly** — Only 5 field types (text, boolean, radio, select, date). Small surface area means fewer hallucinated schemas
-- **Headless rendering** — No opinions about your UI. Works with any component library, CSS framework, or design system
-- **Provider agnostic** — Ships tool definitions for both OpenAI and Anthropic. The schema itself works with any LLM
+- **Better UX** — users fill one form instead of playing 20 questions with a chatbot.
+- **Structured data** — you get typed, validated data back, not free-text you need to parse.
+- **LLM-friendly** — 7 rendering primitives (text, boolean, radio, select, date, number, file). Small surface area means fewer hallucinated schemas.
+- **Conditional + grouped** — `showIf` for dependency rules, `sections` for grouping. Long forms stay focused.
+- **Headless rendering** — no opinions about your UI. Works with any component library, CSS framework, or design system.
+- **Provider-agnostic** — ships tool definitions for OpenAI, Anthropic, Gemini, Mistral, and Ollama, plus `response_format` for deterministic flows and a text-prompt fallback for models without tool-calling.
+- **Round-trip helper** — `formatSubmission` wraps submitted data as a provider-specific tool response so the LLM can reason about what it collected.
+- **Zod + Standard Schema adapters** — pipe submitted data into your existing validation stack.
 
 ## Install
 
 ```bash
-# All three packages
+# Everything
 npm install @formloom/schema @formloom/llm @formloom/react
 
-# Or just what you need
-npm install @formloom/schema          # Types + validator only
-npm install @formloom/schema @formloom/llm   # Schema + LLM tooling, no React
+# Just what you need
+npm install @formloom/schema                       # Types + validator only
+npm install @formloom/schema @formloom/llm         # + prompts, tool defs, parser, formatSubmission
+npm install @formloom/zod                          # + Zod / Standard Schema adapter
 ```
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
-| [`@formloom/schema`](packages/schema/) | The spec. TypeScript types, JSON Schema, and a validator. Zero dependencies. |
-| [`@formloom/llm`](packages/llm/) | The bridge. Prompt fragments and tool/function-call definitions for OpenAI and Anthropic. |
-| [`@formloom/react`](packages/react/) | The renderer. Headless React hooks for form state, validation, and submission. |
+| [`@formloom/schema`](packages/schema/) | The spec: TypeScript types, JSON Schema, validator, `showIf` evaluator, safe regex. Zero dependencies. |
+| [`@formloom/llm`](packages/llm/) | The bridge: prompt fragments, tool/function definitions for every major provider, parser, `formatSubmission` return-path helper. |
+| [`@formloom/react`](packages/react/) | The renderer: headless React hooks for form state, visibility, sections, async validators, file handling. |
+| [`@formloom/zod`](packages/zod/) | Adapters: `formloomToZod` and `formloomToStandardSchema` so integrators can plug submitted data into existing validators. |
 
-## What a schema looks like
+## Quick start
 
-This is the JSON your LLM produces — 5 field types, flat structure, nothing exotic:
-
-```json
-{
-  "version": "1.0",
-  "title": "Contact Information",
-  "fields": [
-    {
-      "id": "full_name",
-      "type": "text",
-      "label": "Full Name",
-      "placeholder": "Jane Doe",
-      "validation": { "required": true }
-    },
-    {
-      "id": "email",
-      "type": "text",
-      "label": "Email",
-      "placeholder": "jane@example.com",
-      "validation": {
-        "required": true,
-        "pattern": "^[^@]+@[^@]+\\.[^@]+$",
-        "patternMessage": "Please enter a valid email address"
-      }
-    },
-    {
-      "id": "contact_method",
-      "type": "radio",
-      "label": "Preferred Contact Method",
-      "options": [
-        { "value": "email", "label": "Email" },
-        { "value": "phone", "label": "Phone" }
-      ],
-      "defaultValue": "email"
-    },
-    {
-      "id": "subscribe",
-      "type": "boolean",
-      "label": "Subscribe to newsletter",
-      "defaultValue": false
-    }
-  ],
-  "submitLabel": "Save"
-}
-```
-
-Field types: `text`, `boolean`, `radio`, `select`, `date` — that's it. Meaning comes from the combination of type + placeholder + validation (e.g. a `text` field with an email regex becomes an email field).
-
-## Quick Start
-
-### 1. Teach your LLM the Formloom vocabulary
-
-#### OpenAI
+### 1. Teach the LLM the Formloom vocabulary
 
 ```ts
-import { FORMLOOM_SYSTEM_PROMPT, FORMLOOM_TOOL_OPENAI } from "@formloom/llm";
+import {
+  FORMLOOM_SYSTEM_PROMPT,
+  FORMLOOM_TOOL_OPENAI,
+  parseFormloomResponse,
+  formatSubmission,
+} from "@formloom/llm";
 
 const response = await openai.chat.completions.create({
-  model: "gpt-4o",
+  model: "gpt-5.2",
   messages: [
     { role: "system", content: `You are a helpful assistant.\n\n${FORMLOOM_SYSTEM_PROMPT}` },
     { role: "user", content: "I'd like to book an appointment" },
@@ -115,122 +73,136 @@ const response = await openai.chat.completions.create({
 });
 ```
 
-#### Anthropic
+### 2. Parse the schema out of the tool call
 
 ```ts
-import { FORMLOOM_SYSTEM_PROMPT, FORMLOOM_TOOL_ANTHROPIC } from "@formloom/llm";
-
-const response = await anthropic.messages.create({
-  model: "claude-sonnet-4-20250514",
-  system: `You are a helpful assistant.\n\n${FORMLOOM_SYSTEM_PROMPT}`,
-  messages: [
-    { role: "user", content: "I'd like to book an appointment" },
-  ],
-  tools: [FORMLOOM_TOOL_ANTHROPIC],
-});
-```
-
-### 2. Parse the LLM's response
-
-```ts
-import { parseFormloomResponse } from "@formloom/llm";
-
-// Works with both OpenAI tool_calls and Anthropic tool_use blocks
-const result = parseFormloomResponse(toolCallArguments);
-
-if (result.success) {
-  // result.schema is a validated FormloomSchema
-  renderForm(result.schema);
-} else {
-  console.error(result.errors);
+const toolCall = response.choices[0].message.tool_calls?.[0];
+const parsed = parseFormloomResponse(toolCall?.function.arguments);
+if (parsed.success) {
+  renderForm(parsed.schema!);
 }
 ```
 
-The parser handles multiple input formats — direct objects, JSON strings, markdown code blocks, and prose with embedded JSON.
+The parser accepts direct objects, JSON strings, ` ```formloom ` fences, ` ```json ` fences, and inline prose JSON — whichever your LLM produces.
 
 ### 3. Render with React (headless)
 
 ```tsx
 import { useFormloom } from "@formloom/react";
 
-function MyForm({ schema }) {
+function MyForm({ schema, onDone }) {
   const form = useFormloom({
     schema,
-    onSubmit: (data) => console.log("Submitted:", data),
+    onSubmit: onDone,
   });
-
   return (
-    <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }}>
-      {form.fields.map(({ field, state, onChange, onBlur }) => (
+    <form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }}>
+      {form.visibleFields.map(({ field, state, onChange, onBlur }) => (
         <div key={field.id}>
           <label>{field.label}</label>
-          {field.type === "text" && (
-            <input
-              value={state.value ?? ""}
-              onChange={(e) => onChange(e.target.value)}
-              onBlur={onBlur}
-            />
-          )}
-          {state.touched && state.error && <span>{state.error}</span>}
+          {/* render by field.type — see packages/react README */}
         </div>
       ))}
-      <button type="submit">Submit</button>
+      <button type="submit" disabled={form.isSubmitting || !form.isValid}>
+        {schema.submitLabel ?? "Submit"}
+      </button>
     </form>
   );
 }
 ```
 
-The hook gives you `state`, `onChange`, and `onBlur` per field. You decide what HTML, component library, or framework renders it — Material UI, Chakra, Tailwind, anything.
+### 4. Close the loop — hand submitted data back to the LLM
 
-### 4. Use without React
-
-`@formloom/schema` and `@formloom/llm` have no React dependency. You can use them with Vue, Svelte, server-side rendering, or any other setup — just consume the validated `FormloomSchema` object and build your own renderer.
-
-## Architecture
-
+```ts
+const nextMessage = formatSubmission(submittedData, {
+  provider: "openai",
+  toolCallId: toolCall.id,
+});
+// Append nextMessage to your conversation and call the model again.
 ```
-LLM Provider          Your App              User
-     |                    |                   |
-     |  tool_call with    |                   |
-     |  FormloomSchema    |                   |
-     |------------------->|                   |
-     |                    |  render form      |
-     |                    |------------------>|
-     |                    |                   |
-     |                    |  FormloomData     |
-     |                    |<------------------|
-     |  structured data   |                   |
-     |<-------------------|                   |
+
+## What a schema looks like
+
+```json
+{
+  "version": "1.1",
+  "title": "Job Application",
+  "fields": [
+    { "id": "name", "type": "text", "label": "Full name", "validation": { "required": true } },
+    { "id": "years", "type": "number", "label": "Years of experience",
+      "validation": { "min": 0, "max": 60, "integer": true, "required": true } },
+    { "id": "employment_type", "type": "radio", "label": "Employment type",
+      "options": [
+        { "value": "full_time", "label": "Full-time" },
+        { "value": "contract", "label": "Contract" }
+      ], "validation": { "required": true } },
+    { "id": "day_rate", "type": "number", "label": "Day rate (USD)",
+      "showIf": { "field": "employment_type", "equals": "contract" } },
+    { "id": "resume", "type": "file", "label": "Resume",
+      "accept": "application/pdf", "maxSizeBytes": 2000000,
+      "validation": { "required": true } }
+  ],
+  "sections": [
+    { "id": "about",   "title": "About you", "fieldIds": ["name", "years"] },
+    { "id": "role",    "title": "The role",  "fieldIds": ["employment_type", "day_rate"] },
+    { "id": "docs",    "title": "Documents", "fieldIds": ["resume"] }
+  ],
+  "submitLabel": "Submit application"
+}
 ```
+
+## Providers
+
+All first-class providers share the same JSON Schema:
+
+| Provider | Tool export | Forcing | Response-format | `formatSubmission` |
+|----------|-------------|---------|-----------------|--------------------|
+| OpenAI | `FORMLOOM_TOOL_OPENAI` | `toolChoice.openai()` | `FORMLOOM_RESPONSE_FORMAT_OPENAI` | `provider: "openai"` |
+| Anthropic | `FORMLOOM_TOOL_ANTHROPIC` | `toolChoice.anthropic()` | — | `provider: "anthropic"` |
+| Gemini | `FORMLOOM_TOOL_GEMINI` | (docs recipes) | — (v1.2) | (generic) |
+| Mistral | `FORMLOOM_TOOL_MISTRAL` | OpenAI-shape | — | (generic) |
+| Ollama | `FORMLOOM_TOOL_OLLAMA` | OpenAI-shape | — | (generic) |
+
+Text-only fallback (`FORMLOOM_TEXT_PROMPT`) works with any model that can produce fenced code blocks.
+
+## Migrating from 1.0
+
+- All v1.0 schemas validate under a v1.1 runtime — no runtime break.
+- `FormloomData`'s value type widens from `string | boolean | string[] | null` to also include `number`, file values, and arrays of file values. If you iterate `Object.values(data)` with narrow types, switch to `FormloomFieldValue`.
+- `FormloomSchema.version` relaxes from the `"1.0"` literal to `string`. Pattern-matching on it at runtime still works.
+- `FORMLOOM_SCHEMA_VERSION` changes from `"1.0"` to `"1.1"`. Read at runtime? Audit those call sites.
+
+New in 1.1:
+
+- `number` and `file` field types
+- `showIf` for conditional visibility
+- `sections` for top-level grouping
+- Canonical `hints` registry
+- `FORMLOOM_TEXT_PROMPT`, `FORMLOOM_RESPONSE_FORMAT_OPENAI`, Gemini/Mistral/Ollama tool exports
+- `formatSubmission` / `formatSubmissionError`, `toolChoice` helpers
+- Async validators + upload handler in `useFormloom`
+- `isSubmitting`, `isValidating`, `visibleFields`, `sections` on the hook return
+- `@formloom/zod` package
 
 ## Examples
 
 | Example | Description |
 |---------|-------------|
-| [`basic-react`](examples/basic-react/) | Renders hardcoded mock schemas with the headless hook — no LLM or API key needed |
-| [`fullstack`](examples/fullstack/) | Chat app where GPT dynamically generates forms via tool calls |
-
-Run the basic example:
-
-```bash
-pnpm install
-pnpm build
-pnpm --filter @formloom/example-basic-react dev
-```
+| [`basic-react`](examples/basic-react/) | Renders hardcoded mock schemas with the headless hook — no LLM or API key needed. |
+| [`provider-free`](examples/provider-free/) | Simulates three integration paths (tool call / response_format / ```formloom fenced text) entirely offline. CI gate. |
+| [`fullstack`](examples/fullstack/) | Chat app where GPT generates forms and receives submissions back via `formatSubmission`. |
 
 ## Development
 
-This is a pnpm monorepo using [Turborepo](https://turbo.build/repo) for task orchestration.
+pnpm + Turborepo monorepo.
 
 ```bash
 pnpm install       # Install all dependencies
-pnpm build         # Build all packages (schema -> llm -> react)
-pnpm test          # Run tests across all packages
-pnpm lint          # Lint all packages
-pnpm typecheck     # Type-check all packages
+pnpm build         # Build every package
+pnpm test          # Run tests across every package
+pnpm lint          # Lint
+pnpm typecheck     # Type-check
 ```
-
-Packages are built with [tsup](https://tsup.egoist.dev/) and tested with [Vitest](https://vitest.dev/).
 
 ## Contributing
 

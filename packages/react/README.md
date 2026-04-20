@@ -1,6 +1,6 @@
 # @formloom/react
 
-Headless React hooks for rendering Formloom schemas. Manages form state, validation, and submission. Zero DOM opinions - you bring your own UI.
+Headless React hooks for rendering Formloom schemas. Manages form state, validation, visibility, and submission. Zero DOM opinions — bring your own UI.
 
 ## Installation
 
@@ -8,9 +8,9 @@ Headless React hooks for rendering Formloom schemas. Manages form state, validat
 npm install @formloom/react @formloom/schema
 ```
 
-Requires React 18+ or 19+ as a peer dependency.
+Peer dependency: React `^18.0.0 || ^19.0.0`.
 
-## Basic Usage
+## Basic usage
 
 ```tsx
 import { useFormloom } from "@formloom/react";
@@ -19,147 +19,200 @@ import type { FormloomSchema } from "@formloom/react";
 function DynamicForm({ schema }: { schema: FormloomSchema }) {
   const form = useFormloom({
     schema,
-    onSubmit: (data) => {
-      console.log("Form data:", data);
-      // Send data back to LLM or your API
+    onSubmit: async (data) => {
+      // Send data back to LLM via @formloom/llm's formatSubmission
     },
-    onError: (errors) => {
-      console.log("Validation failed:", errors);
-    },
+    onError: (errors) => console.warn("invalid", errors),
   });
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(); }}>
-      {form.fields.map(({ field, state, onChange, onBlur }) => (
+    <form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }}>
+      {form.visibleFields.map(({ field, state, onChange, onBlur }) => (
         <div key={field.id}>
           <label>{field.label}</label>
-
           {field.type === "text" && (
             <input
-              type="text"
-              placeholder={field.placeholder}
-              value={(state.value as string) ?? ""}
+              value={(state.value as string | null) ?? ""}
               onChange={(e) => onChange(e.target.value)}
               onBlur={onBlur}
             />
           )}
-
-          {field.type === "boolean" && (
-            <input
-              type="checkbox"
-              checked={(state.value as boolean) ?? false}
-              onChange={(e) => onChange(e.target.checked)}
-              onBlur={onBlur}
-            />
-          )}
-
-          {field.type === "radio" && field.options.map((opt) => (
-            <label key={opt.value}>
-              <input
-                type="radio"
-                name={field.id}
-                checked={state.value === opt.value}
-                onChange={() => onChange(opt.value)}
-              />
-              {opt.label}
-            </label>
-          ))}
-
-          {field.type === "select" && (
-            <select
-              value={(state.value as string) ?? ""}
-              onChange={(e) => onChange(e.target.value || null)}
-              onBlur={onBlur}
-            >
-              <option value="">Select...</option>
-              {field.options.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          )}
-
-          {field.type === "date" && (
-            <input
-              type="date"
-              value={(state.value as string) ?? ""}
-              onChange={(e) => onChange(e.target.value)}
-              onBlur={onBlur}
-            />
-          )}
-
-          {state.touched && state.error && (
+          {/* ... other field types ... */}
+          {state.touched && state.error !== null && (
             <span className="error">{state.error}</span>
           )}
         </div>
       ))}
-
-      <button type="submit" disabled={!form.isValid}>
-        {schema.submitLabel || "Submit"}
+      <button type="submit" disabled={form.isSubmitting || !form.isValid}>
+        {form.isSubmitting ? "Submitting..." : (schema.submitLabel ?? "Submit")}
       </button>
     </form>
   );
 }
 ```
 
-## Per-Field Hook
+### Rendering sections
 
-For more control, use `useFormloomField` to grab a single field by id:
+```tsx
+{form.sections !== undefined
+  ? form.sections.map((s) =>
+      s.visible ? (
+        <fieldset key={s.section.id}>
+          {s.section.title !== undefined && <legend>{s.section.title}</legend>}
+          {s.visibleFields.map((f) => <FieldInput key={f.field.id} {...f} />)}
+        </fieldset>
+      ) : null,
+    )
+  : form.visibleFields.map((f) => <FieldInput key={f.field.id} {...f} />)}
+```
+
+### File fields
+
+Use `adaptFileList` (or `adaptFile`) in the `<input type="file">` onChange handler:
+
+```tsx
+import { adaptFileList } from "@formloom/react";
+
+<input
+  type="file"
+  multiple={field.multiple}
+  onChange={(e) => {
+    const files = e.target.files;
+    if (files === null) return;
+    void adaptFileList(files).then((converted) => {
+      onChange(field.multiple === true ? converted : converted[0] ?? null);
+    });
+  }}
+/>
+```
+
+By default files are captured inline as base64 data URLs. Pass an upload handler to `adaptFile` / `adaptFileList` directly to upload instead:
+
+```tsx
+import { adaptFileList, type UploadHandler } from "@formloom/react";
+
+const uploadHandler: UploadHandler = async (file) => {
+  const { url } = await myUploader(file);
+  return { url, name: file.name, mime: file.type, size: file.size };
+};
+
+<input
+  type="file"
+  onChange={(e) => {
+    const files = e.target.files;
+    if (files === null) return;
+    void adaptFileList(files, uploadHandler).then((converted) => {
+      onChange(field.multiple === true ? converted : converted[0] ?? null);
+    });
+  }}
+/>
+```
+
+### Async validators
+
+```ts
+useFormloom({
+  schema,
+  onSubmit,
+  validators: {
+    username: {
+      validate: async (value) => {
+        const res = await fetch(`/api/usernames/${value}`);
+        return res.ok ? null : "Username is taken";
+      },
+      mode: "onChange",
+      debounceMs: 400,
+    },
+    email: async (value) => {
+      // bare-function form runs on blur by default
+      return value === "blocked@example.com" ? "Blocked domain" : null;
+    },
+  },
+});
+```
+
+The submit path awaits all in-flight async validators before invoking `onSubmit`. Track per-field and form-wide state via `state.isValidating` and `form.isValidating`.
+
+## Per-field hook
 
 ```tsx
 import { useFormloom, useFormloomField } from "@formloom/react";
 
-function MyForm({ schema }) {
-  const form = useFormloom({ schema, onSubmit: handleSubmit });
+function EmailInput() {
+  const form = useFormloom({ schema, onSubmit });
   const emailField = useFormloomField(form, "email");
-
-  if (!emailField) return null;
-
-  return (
-    <input
-      value={emailField.state.value ?? ""}
-      onChange={(e) => emailField.onChange(e.target.value)}
-      onBlur={emailField.onBlur}
-    />
-  );
+  if (emailField === null) return null;
+  return <input value={(emailField.state.value as string) ?? ""} ... />;
 }
 ```
 
-## API Reference
+## API reference
 
 ### `useFormloom(options)`
 
 | Option | Type | Description |
 |--------|------|-------------|
 | `schema` | `FormloomSchema` | The schema to render |
-| `onSubmit` | `(data: FormloomData) => void` | Called on valid submission |
-| `onError` | `(errors) => void` | Called on invalid submission |
-| `initialValues` | `Partial<FormloomData>` | Override default values |
+| `onSubmit` | `(data) => void \| Promise<void>` | Called on valid submission |
+| `onError` | `(errors) => void` | Called when submit fails validation |
+| `initialValues` | `Partial<FormloomData>` | Override default values (read on mount only) |
+| `validators` | `Record<fieldId, AsyncValidator>` | Async validators per field |
+
+`initialValues` and `validators` are captured on mount — passing new references across renders does not reset state. File uploads are handled by calling `adaptFile(file, uploadHandler)` in your input's `onChange`.
 
 **Returns `UseFormloomReturn`:**
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `schema` | `FormloomSchema` | The original schema |
-| `fields` | `FieldProps[]` | Array of field props in schema order |
-| `getField` | `(id: string) => FieldProps` | Get field by id |
-| `data` | `FormloomData` | Current form values |
-| `isValid` | `boolean` | Whether all fields are valid |
-| `isDirty` | `boolean` | Whether any field has been touched |
-| `handleSubmit` | `() => void` | Validate and submit |
+| `schema` | `FormloomSchema` | Original schema |
+| `fields` | `FieldProps[]` | Every field, including hidden |
+| `visibleFields` | `FieldProps[]` | Fields passing their `showIf` rule |
+| `sections` | `SectionProps[] \| undefined` | Grouped fields when schema declares sections |
+| `getField(id)` | `(id) => FieldProps \| undefined` | Lookup by id |
+| `data` | `FormloomData` | Current values, hidden fields omitted |
+| `isValid` | `boolean` | Eager sync validity across visible fields |
+| `isDirty` | `boolean` | Any field touched |
+| `isSubmitting` | `boolean` | Async `onSubmit` in flight |
+| `isValidating` | `boolean` | Any async validator pending or debouncing |
+| `handleSubmit` | `() => Promise<void>` | Validate (sync + async) and submit |
 | `reset` | `() => void` | Reset to defaults |
-| `errors` | `Array<{ fieldId, message }>` | Current errors |
+| `errors` | `Array<{ fieldId, message }>` | Current visible-field errors |
 
 ### `FieldProps`
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `field` | `FormField` | The field definition |
-| `state.value` | `string \| boolean \| string[] \| null` | Current value |
+| `state.value` | `FormloomFieldValue` | Current value |
 | `state.error` | `string \| null` | Validation error |
-| `state.touched` | `boolean` | Has been interacted with |
+| `state.touched` | `boolean` | Interacted with |
 | `state.isValid` | `boolean` | No current error |
-| `onChange` | `(value) => void` | Value change handler |
-| `onBlur` | `() => void` | Blur handler (triggers validation) |
+| `state.isValidating` | `boolean` | Per-field async validator in flight |
+| `onChange` | `(value) => void` | Change handler |
+| `onBlur` | `() => void` | Blur handler |
+| `visible` | `boolean` | False when hidden by `showIf` |
+
+## Re-usable validation helpers
+
+The package exports the sync-validation primitives the hook uses internally so
+custom renderers and server-side integrators can validate with identical
+semantics:
+
+```ts
+import { validateField, fileMatchesAccept, mimeMatches } from "@formloom/react";
+
+// Sync validation of a single field value. Returns a message or null.
+validateField(field, value);
+
+// HTML <input accept> matching — pass the filename so extension tokens work.
+fileMatchesAccept("image/*,.pdf", file.mime, file.name);
+
+// MIME-only subset of fileMatchesAccept. Prefer fileMatchesAccept when the filename is available.
+mimeMatches(file.mime, "image/png,image/*");
+```
+
+`fileMatchesAccept` and `mimeMatches` are re-exported from `@formloom/schema`
+so they're also available without the React dep.
 
 ## License
 

@@ -122,6 +122,82 @@ importers:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@25.5.0)(tsx@4.21.0)
 
+  examples/provider-free:
+    dependencies:
+      '@formloom/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      '@formloom/react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      '@formloom/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.0
+        version: 4.7.0(vite@6.4.1(@types/node@25.5.0)(tsx@4.21.0))
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.1(@types/node@25.5.0)(tsx@4.21.0)
+
+  packages/integration-tests:
+    devDependencies:
+      '@formloom/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@formloom/react':
+        specifier: workspace:*
+        version: link:../react
+      '@formloom/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@formloom/zod':
+        specifier: workspace:*
+        version: link:../zod
+      '@testing-library/react':
+        specifier: ^16.0.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      jsdom:
+        specifier: ^26.0.0
+        version: 26.1.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.5.0)(jsdom@26.1.0)
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+
   packages/llm:
     dependencies:
       '@formloom/schema':
@@ -177,6 +253,25 @@ importers:
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.5.0)(jsdom@26.1.0)
+
+  packages/zod:
+    dependencies:
+      '@formloom/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      tsup:
+        specifier: ^8.3.0
+        version: 8.5.1(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.5.0)(jsdom@26.1.0)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
 
 packages:
 

@@ -283,7 +283,7 @@ describe("validateSchema - invalid fields", () => {
       fields: [{ id: "a", type: "email", label: "Email" }],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.message.includes("Invalid field type"))).toBe(true);
+    expect(result.errors.some((e) => e.message.includes("Unknown field type"))).toBe(true);
   });
 
   it("rejects missing label", () => {

@@ -6,12 +6,23 @@ export type {
   UseFormloomOptions,
   FieldProps,
   FieldState,
+  SectionProps,
+  AsyncValidator,
+  AsyncValidatorConfig,
+  UploadHandler,
 } from "./types";
+
+export { validateField, mimeMatches, fileMatchesAccept } from "./validation";
+export { adaptFile, adaptFileList } from "./file-adapter";
 
 // Re-export schema types for convenience
 export type {
   FormloomSchema,
   FormloomData,
+  FormloomFieldValue,
+  FormloomFileValue,
   FormField,
   FieldOption,
+  Section,
+  ShowIfRule,
 } from "@formloom/schema";
