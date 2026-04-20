@@ -6,6 +6,10 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   schema?: FormloomSchema;
+  /** OpenAI tool_call_id captured when the assistant emitted this form. */
+  toolCallId?: string;
+  /** The prompt that triggered the form — replayed for the continuation turn. */
+  originalUserMessage?: string;
   submittedData?: FormloomData;
 }
 
@@ -38,6 +42,8 @@ export default function App() {
             role: "assistant",
             content: data.schema.description || "Please fill out this form:",
             schema: data.schema,
+            toolCallId: data.toolCallId,
+            originalUserMessage: text,
           },
         ]);
       } else {
@@ -56,12 +62,51 @@ export default function App() {
     }
   }
 
-  function handleFormSubmit(msgIndex: number, data: FormloomData) {
+  async function handleFormSubmit(msgIndex: number, data: FormloomData) {
     setMessages((prev) =>
       prev.map((msg, i) =>
         i === msgIndex ? { ...msg, submittedData: data } : msg,
       ),
     );
+
+    const source = messages[msgIndex];
+    if (
+      source === undefined ||
+      source.schema === undefined ||
+      source.toolCallId === undefined ||
+      source.originalUserMessage === undefined
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originalUserMessage: source.originalUserMessage,
+          toolCallId: source.toolCallId,
+          schema: source.schema,
+          data,
+        }),
+      });
+      const followup = await res.json();
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: followup.text ?? "(no response)" },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Submission captured, but the follow-up request to the LLM failed.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

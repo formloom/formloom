@@ -10,11 +10,14 @@ export interface ParseResult {
 /**
  * Extracts and validates a Formloom schema from LLM output.
  *
- * Handles:
- * 1. Direct object (already parsed tool call arguments)
- * 2. JSON string (raw text output)
- * 3. Markdown code block containing JSON
- * 4. JSON embedded in prose text
+ * Handles five input shapes, in order of preference:
+ *   1. A plain object (already-parsed tool call args).
+ *   2. A JSON string passed directly as the tool call arguments.
+ *   3. A ```formloom fenced block inside a prose response (preferred when
+ *      the text prompt is used).
+ *   4. A ```json fenced block, or an unlabelled ``` block, as a fallback.
+ *   5. The first `{ ... }` block in free-form prose — last-resort fallback
+ *      for models that ignore the code-fence instructions.
  */
 export function parseFormloomResponse(input: unknown): ParseResult {
   if (input !== null && typeof input === "object" && !Array.isArray(input)) {
@@ -42,29 +45,52 @@ export function parseFormloomResponse(input: unknown): ParseResult {
   };
 }
 
+const FENCED_BLOCK_PATTERN = "```(formloom|json)?[ \\t]*\\r?\\n?([\\s\\S]*?)```";
+
 function extractJSON(text: string): unknown | null {
-  // Try markdown code block first
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
-  if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1].trim());
-    } catch {
-      // fall through
-    }
+  const fenced = extractPreferredFence(text);
+  if (fenced !== null) {
+    const parsed = tryParse(fenced);
+    if (parsed !== null) return parsed;
   }
 
-  // Try first { ... } block
   const braceStart = text.indexOf("{");
   const braceEnd = text.lastIndexOf("}");
   if (braceStart !== -1 && braceEnd > braceStart) {
-    try {
-      return JSON.parse(text.slice(braceStart, braceEnd + 1));
-    } catch {
-      // fall through
-    }
+    const parsed = tryParse(text.slice(braceStart, braceEnd + 1));
+    if (parsed !== null) return parsed;
   }
 
   return null;
+}
+
+function extractPreferredFence(text: string): string | null {
+  // Fresh regex per call — stateful globals leak lastIndex across callers.
+  const re = new RegExp(FENCED_BLOCK_PATTERN, "g");
+
+  let firstFormloom: string | null = null;
+  let firstJson: string | null = null;
+  let firstAny: string | null = null;
+
+  for (;;) {
+    const match = re.exec(text);
+    if (match === null) break;
+    const tag = match[1] ?? "";
+    const body = match[2].trim();
+    if (tag === "formloom" && firstFormloom === null) firstFormloom = body;
+    else if (tag === "json" && firstJson === null) firstJson = body;
+    else if (tag === "" && firstAny === null) firstAny = body;
+  }
+
+  return firstFormloom ?? firstJson ?? firstAny;
+}
+
+function tryParse(body: string): unknown | null {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return null;
+  }
 }
 
 function validateAndReturn(obj: unknown): ParseResult {

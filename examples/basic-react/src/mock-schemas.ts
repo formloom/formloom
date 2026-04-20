@@ -132,8 +132,89 @@ export const bookingSchema: FormloomSchema = {
   submitLabel: "Book Appointment",
 };
 
+export const jobApplicationSchema: FormloomSchema = {
+  version: "1.1",
+  title: "Job Application",
+  description:
+    "Demonstrates v1.1: number and file fields, conditional visibility, sections, and hints.",
+  fields: [
+    {
+      id: "full_name",
+      type: "text",
+      label: "Full Name",
+      validation: { required: true },
+    },
+    {
+      id: "email",
+      type: "text",
+      label: "Email",
+      validation: {
+        required: true,
+        pattern: "^[^@]+@[^@]+\\.[^@]+$",
+        patternMessage: "Please enter a valid email address",
+      },
+    },
+    {
+      id: "years_experience",
+      type: "number",
+      label: "Years of experience",
+      validation: { min: 0, max: 60, integer: true, required: true },
+    },
+    {
+      id: "employment_type",
+      type: "radio",
+      label: "Employment type",
+      options: [
+        { value: "full_time", label: "Full-time" },
+        { value: "contract", label: "Contract" },
+      ],
+      validation: { required: true },
+    },
+    {
+      id: "contract_rate",
+      type: "number",
+      label: "Contract day rate (USD)",
+      showIf: { field: "employment_type", equals: "contract" },
+      validation: { min: 1, step: 1 },
+    },
+    {
+      id: "cover_letter",
+      type: "text",
+      label: "Cover letter",
+      hints: { display: "textarea", rows: 6 },
+    },
+    {
+      id: "resume",
+      type: "file",
+      label: "Resume",
+      accept: "application/pdf,.pdf",
+      maxSizeBytes: 2_000_000,
+      validation: { required: true },
+    },
+  ],
+  sections: [
+    {
+      id: "about_you",
+      title: "About you",
+      fieldIds: ["full_name", "email", "years_experience"],
+    },
+    {
+      id: "role",
+      title: "The role",
+      fieldIds: ["employment_type", "contract_rate"],
+    },
+    {
+      id: "documents",
+      title: "Documents",
+      fieldIds: ["cover_letter", "resume"],
+    },
+  ],
+  submitLabel: "Submit application",
+};
+
 export const schemas = {
   contact: contactSchema,
   feedback: feedbackSchema,
   booking: bookingSchema,
+  jobApplication: jobApplicationSchema,
 } as const;
