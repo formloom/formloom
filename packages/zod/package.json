@@ -1,6 +1,6 @@
 {
   "name": "@formloom/zod",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zod and Standard Schema adapters for Formloom — validate submitted FormloomData with Zod or any Standard Schema consumer.",
   "license": "MIT",
   "author": "Formloom contributors",

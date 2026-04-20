@@ -1,10 +1,19 @@
 {
   "name": "@formloom/llm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "LLM integration layer for Formloom - prompt fragments, tool definitions, parser, and return-path helper for OpenAI, Anthropic, Gemini, Mistral, and Ollama",
   "license": "MIT",
   "author": "Formloom contributors",
-  "keywords": ["form", "llm", "openai", "anthropic", "gemini", "tool-use", "structured-output", "formloom"],
+  "keywords": [
+    "form",
+    "llm",
+    "openai",
+    "anthropic",
+    "gemini",
+    "tool-use",
+    "structured-output",
+    "formloom"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -15,7 +24,9 @@
       "require": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
