@@ -95,7 +95,7 @@ Your chat stays a chat. Your design system stays yours. Formloom just owns the h
 
 ```json
 {
-  "version": "1.1",
+  "version": "1.2",
   "title": "Job Application",
   "fields": [
     {
@@ -250,8 +250,13 @@ Provider tool exports shipped today:
 - Schema validation before a single pixel renders
 - Conditional fields via `showIf` with `equals`, `in`, `notEmpty`, composed via `allOf` / `anyOf` / `not`
 - Section grouping for longer forms
+- Multi-step wizards with `useFormloomWizard` — one section per step, validation-gated `next()`
+- Option descriptions (two-line radio/select) and opt-in "Other…" freeform input on radio/select
+- `readOnly` / `disabled` view modes for recap and review surfaces
 - File uploads, inline or delegated to your upload handler
 - Async field validators in React (debounced, abortable, flushed on submit)
+- Live-sync hook `onValueChange` to stream partial answers to an LLM while the user types
+- Custom widget variants via `hints.variant` — host-defined, opaque, declaration-mergeable
 - ReDoS-safe regex handling for LLM-authored patterns
 - Zod and Standard Schema adapters for server-side parity
 

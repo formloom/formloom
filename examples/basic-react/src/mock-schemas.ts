@@ -212,9 +212,84 @@ export const jobApplicationSchema: FormloomSchema = {
   submitLabel: "Submit application",
 };
 
+export const onboardingWizardSchema: FormloomSchema = {
+  version: "1.2",
+  title: "Team onboarding",
+  description:
+    "Demonstrates v1.2: option descriptions, allowCustom, hints.variant, readOnly, and the wizard stepper.",
+  fields: [
+    {
+      id: "account_id",
+      type: "text",
+      label: "Account ID",
+      defaultValue: "acct_1234",
+      readOnly: true,
+      description: "Tied to your workspace — can't be changed here.",
+    },
+    {
+      id: "reporting",
+      type: "radio",
+      label: "Reporting cadence",
+      options: [
+        {
+          value: "hourly",
+          label: "Hourly",
+          description: "Brief status updates every hour during work hours",
+        },
+        {
+          value: "eod",
+          label: "End-of-day summary",
+          description: "One consolidated report at 5 PM",
+        },
+        {
+          value: "incident_only",
+          label: "Incident only",
+          description: "Only notify when something breaks",
+        },
+      ],
+      defaultValue: "eod",
+      validation: { required: true },
+    },
+    {
+      id: "crm",
+      type: "radio",
+      label: "Which CRM do you use?",
+      options: [
+        { value: "salesforce", label: "Salesforce" },
+        { value: "hubspot", label: "HubSpot" },
+        { value: "pipedrive", label: "Pipedrive" },
+      ],
+      allowCustom: true,
+      customLabel: "Other CRM",
+      customPlaceholder: "e.g. Zoho",
+    },
+    {
+      id: "tools",
+      type: "select",
+      label: "Tools to enable",
+      multiple: true,
+      options: [
+        { value: "jira", label: "Jira" },
+        { value: "linear", label: "Linear" },
+        { value: "notion", label: "Notion" },
+      ],
+      allowCustom: true,
+      customLabel: "Other tool",
+      hints: { variant: "tool-select" },
+    },
+  ],
+  sections: [
+    { id: "account", title: "Account", fieldIds: ["account_id"] },
+    { id: "cadence", title: "Cadence", fieldIds: ["reporting"] },
+    { id: "stack", title: "Stack", fieldIds: ["crm", "tools"] },
+  ],
+  submitLabel: "Finish onboarding",
+};
+
 export const schemas = {
   contact: contactSchema,
   feedback: feedbackSchema,
   booking: bookingSchema,
   jobApplication: jobApplicationSchema,
+  onboardingWizard: onboardingWizardSchema,
 } as const;

@@ -1,9 +1,13 @@
 import { useFormloom, adaptFileList } from "@formloom/react";
+import { useState } from "react";
 import type {
   FormloomSchema,
   FormloomData,
   FieldProps,
+  FieldCustomInfo,
+  FormloomFieldValue,
   FormloomFileValue,
+  FieldOption,
 } from "@formloom/react";
 
 interface FormloomRendererProps {
@@ -108,10 +112,14 @@ export function FormloomRenderer({ schema, onSubmit }: FormloomRendererProps) {
 }
 
 function FieldRenderer(props: FieldProps) {
-  const { field, state, onChange, onBlur } = props;
+  const { field, state, onChange, onBlur, custom } = props;
   const hasError = state.touched && state.error !== null;
+  const lock = state.readOnly || state.disabled;
 
-  const wrapperStyle: React.CSSProperties = { marginBottom: 16 };
+  const wrapperStyle: React.CSSProperties = {
+    marginBottom: 16,
+    opacity: state.disabled ? 0.6 : 1,
+  };
   const labelStyle: React.CSSProperties = {
     display: "block",
     marginBottom: 4,
@@ -125,6 +133,7 @@ function FieldRenderer(props: FieldProps) {
     borderRadius: 6,
     fontSize: 14,
     boxSizing: "border-box",
+    background: lock ? "#f3f4f6" : "#fff",
   };
   const errorStyle: React.CSSProperties = {
     color: "#ef4444",
@@ -137,9 +146,40 @@ function FieldRenderer(props: FieldProps) {
     marginTop: 2,
     marginBottom: 4,
   };
+  const optionDescStyle: React.CSSProperties = {
+    color: "#6b7280",
+    fontSize: 12,
+    marginLeft: 24,
+    marginTop: -2,
+    marginBottom: 4,
+  };
 
   const hintDisplay = field.hints?.display;
   const hintRows = typeof field.hints?.rows === "number" ? field.hints.rows : 4;
+
+  if (state.readOnly) {
+    return (
+      <div style={wrapperStyle}>
+        <label style={labelStyle}>{field.label}</label>
+        {field.description !== undefined && (
+          <div style={descStyle}>{field.description}</div>
+        )}
+        <div
+          style={{
+            ...inputStyle,
+            minHeight: 36,
+            display: "flex",
+            alignItems: "center",
+            color: "#374151",
+          }}
+        >
+          {formatReadOnlyValue(state.value) ?? (
+            <span style={{ color: "#9ca3af" }}>—</span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={wrapperStyle}>
@@ -159,6 +199,7 @@ function FieldRenderer(props: FieldProps) {
           style={{ ...inputStyle, resize: "vertical" }}
           rows={hintRows}
           placeholder={field.placeholder}
+          disabled={state.disabled}
           value={(state.value as string | null) ?? ""}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -168,6 +209,7 @@ function FieldRenderer(props: FieldProps) {
           type={hintDisplay === "password" ? "password" : "text"}
           style={inputStyle}
           placeholder={field.placeholder}
+          disabled={state.disabled}
           value={(state.value as string | null) ?? ""}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -178,6 +220,7 @@ function FieldRenderer(props: FieldProps) {
         <input
           type="date"
           style={inputStyle}
+          disabled={state.disabled}
           value={(state.value as string | null) ?? ""}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -189,6 +232,7 @@ function FieldRenderer(props: FieldProps) {
           type="number"
           style={inputStyle}
           placeholder={field.placeholder}
+          disabled={state.disabled}
           min={field.validation?.min}
           max={field.validation?.max}
           step={field.validation?.step ?? (field.validation?.integer === true ? 1 : undefined)}
@@ -259,32 +303,49 @@ function FieldRenderer(props: FieldProps) {
       {field.type === "radio" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {field.options.map((opt) => (
-            <label
-              key={opt.value}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="radio"
-                name={field.id}
-                value={opt.value}
-                checked={state.value === opt.value}
-                onChange={() => onChange(opt.value)}
-                onBlur={onBlur}
-              />
-              <span style={{ fontSize: 14 }}>{opt.label}</span>
-            </label>
+            <div key={opt.value}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: state.disabled ? "not-allowed" : "pointer",
+                }}
+              >
+                <input
+                  type="radio"
+                  name={field.id}
+                  value={opt.value}
+                  checked={state.value === opt.value}
+                  disabled={state.disabled}
+                  onChange={() => onChange(opt.value)}
+                  onBlur={onBlur}
+                />
+                <span style={{ fontSize: 14 }}>{opt.label}</span>
+              </label>
+              {opt.description !== undefined && (
+                <div style={optionDescStyle}>{opt.description}</div>
+              )}
+            </div>
           ))}
+          {custom?.allowed === true && (
+            <RadioCustomOption
+              fieldId={field.id}
+              value={state.value}
+              options={field.options.map((o) => o.value)}
+              disabled={state.disabled}
+              custom={custom}
+              onChange={onChange}
+              onBlur={onBlur}
+            />
+          )}
         </div>
       )}
 
       {field.type === "select" && field.multiple !== true && (
         <select
           style={inputStyle}
+          disabled={state.disabled}
           value={(state.value as string | null) ?? ""}
           onChange={(e) => onChange(e.target.value || null)}
           onBlur={onBlur}
@@ -293,15 +354,28 @@ function FieldRenderer(props: FieldProps) {
           {field.options.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
+              {opt.description !== undefined ? ` — ${opt.description}` : ""}
             </option>
           ))}
         </select>
       )}
 
-      {field.type === "select" && field.multiple === true && (
+      {field.type === "select" && field.multiple === true && custom?.allowed === true && (
+        <MultiSelectWithCustom
+          value={Array.isArray(state.value) ? (state.value as string[]) : []}
+          options={field.options}
+          custom={custom}
+          disabled={state.disabled}
+          onChange={onChange}
+          onBlur={onBlur}
+        />
+      )}
+
+      {field.type === "select" && field.multiple === true && custom?.allowed !== true && (
         <select
           style={{ ...inputStyle, minHeight: 80 }}
           multiple
+          disabled={state.disabled}
           value={(state.value as string[] | null) ?? []}
           onChange={(e) => {
             const selected = Array.from(e.target.selectedOptions, (o) => o.value);
@@ -365,6 +439,219 @@ function FileInput({
       )}
     </div>
   );
+}
+
+function RadioCustomOption({
+  fieldId,
+  value,
+  options,
+  disabled,
+  custom,
+  onChange,
+  onBlur,
+}: {
+  fieldId: string;
+  value: FormloomFieldValue;
+  options: string[];
+  disabled: boolean;
+  custom: FieldCustomInfo;
+  onChange: (next: FormloomFieldValue) => void;
+  onBlur: () => void;
+}) {
+  const selected = custom.isCustomValue;
+  const customValue = selected && typeof value === "string" ? value : "";
+
+  return (
+    <div>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          cursor: disabled ? "not-allowed" : "pointer",
+        }}
+      >
+        <input
+          type="radio"
+          name={fieldId}
+          checked={selected}
+          disabled={disabled}
+          onChange={() => onChange(customValue === "" ? "__placeholder__" : customValue)}
+          onBlur={onBlur}
+        />
+        <span style={{ fontSize: 14 }}>{custom.label}</span>
+      </label>
+      {(selected || !options.includes(String(value ?? ""))) && (
+        <input
+          type="text"
+          placeholder={custom.placeholder}
+          disabled={disabled}
+          style={{
+            marginTop: 4,
+            marginLeft: 24,
+            padding: "6px 10px",
+            fontSize: 13,
+            border: "1px solid #d1d5db",
+            borderRadius: 4,
+          }}
+          value={customValue}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+        />
+      )}
+    </div>
+  );
+}
+
+function MultiSelectWithCustom({
+  value,
+  options,
+  custom,
+  disabled,
+  onChange,
+  onBlur,
+}: {
+  value: string[];
+  options: FieldOption[];
+  custom: FieldCustomInfo;
+  disabled: boolean;
+  onChange: (next: FormloomFieldValue) => void;
+  onBlur: () => void;
+}) {
+  const [pending, setPending] = useState("");
+  const optionValues = options.map((o) => o.value);
+  const customValues = value.filter((v) => !optionValues.includes(v));
+
+  const toggle = (v: string) => {
+    if (value.includes(v)) onChange(value.filter((x) => x !== v));
+    else onChange([...value, v]);
+  };
+
+  const addCustom = () => {
+    const trimmed = pending.trim();
+    if (trimmed === "") return;
+    if (value.includes(trimmed)) {
+      setPending("");
+      return;
+    }
+    onChange([...value, trimmed]);
+    setPending("");
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {options.map((opt) => (
+          <label
+            key={opt.value}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              cursor: disabled ? "not-allowed" : "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={value.includes(opt.value)}
+              disabled={disabled}
+              onChange={() => toggle(opt.value)}
+              onBlur={onBlur}
+            />
+            <span style={{ fontSize: 14 }}>{opt.label}</span>
+          </label>
+        ))}
+      </div>
+      {customValues.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+          {customValues.map((v) => (
+            <span
+              key={v}
+              style={{
+                background: "#e0e7ff",
+                color: "#3730a3",
+                padding: "2px 8px",
+                borderRadius: 999,
+                fontSize: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              {v}
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onChange(value.filter((x) => x !== v))}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: 0,
+                  color: "#3730a3",
+                  fontSize: 14,
+                }}
+                aria-label={`Remove ${v}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+        <input
+          type="text"
+          placeholder={custom.placeholder ?? custom.label}
+          disabled={disabled}
+          style={{
+            flex: 1,
+            padding: "6px 10px",
+            fontSize: 13,
+            border: "1px solid #d1d5db",
+            borderRadius: 4,
+          }}
+          value={pending}
+          onChange={(e) => setPending(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addCustom();
+            }
+          }}
+          onBlur={onBlur}
+        />
+        <button
+          type="button"
+          disabled={disabled || pending.trim() === ""}
+          onClick={addCustom}
+          style={{
+            padding: "6px 12px",
+            fontSize: 13,
+            border: "1px solid #d1d5db",
+            borderRadius: 4,
+            background: "#fff",
+            cursor: disabled ? "not-allowed" : "pointer",
+          }}
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatReadOnlyValue(value: FormloomFieldValue): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value === "" ? null : value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return null;
+    if (typeof value[0] === "string") return (value as string[]).join(", ");
+    return `${value.length} item${value.length === 1 ? "" : "s"}`;
+  }
+  if (typeof value === "object" && "name" in value) return String(value.name);
+  return null;
 }
 
 function summariseFileValue(

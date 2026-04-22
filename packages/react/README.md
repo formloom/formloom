@@ -165,8 +165,23 @@ function EmailInput() {
 | `onError` | `(errors) => void` | Called when submit fails validation |
 | `initialValues` | `Partial<FormloomData>` | Override default values (read on mount only) |
 | `validators` | `Record<fieldId, AsyncValidator>` | Async validators per field |
+| `onValueChange` | `(fieldId, value, data) => void` | Called synchronously on every user-initiated change. Not fired on `reset()` or initial render. |
+| `readOnly` | `boolean` | Marks every field read-only; `handleSubmit` no-ops. Per-field `readOnly: false` overrides the hook. |
+| `disabled` | `boolean` | Marks every field disabled; `handleSubmit` no-ops. Per-field `disabled: false` overrides the hook. |
 
 `initialValues` and `validators` are captured on mount — passing new references across renders does not reset state. File uploads are handled by calling `adaptFile(file, uploadHandler)` in your input's `onChange`.
+
+`onValueChange` is captured by ref and always reflects the latest closure, so passing an arrow function inline does not miss updates. If you need to debounce (e.g. LLM-context sync), wrap the callback yourself — the hook stays lean:
+
+```tsx
+import { useDebouncedCallback } from "use-debounce";
+
+const onValueChange = useDebouncedCallback(
+  (fieldId, value, data) => syncToLLMContext(data),
+  300,
+);
+useFormloom({ schema, onSubmit, onValueChange });
+```
 
 **Returns `UseFormloomReturn`:**
 
@@ -196,9 +211,56 @@ function EmailInput() {
 | `state.touched` | `boolean` | Interacted with |
 | `state.isValid` | `boolean` | No current error |
 | `state.isValidating` | `boolean` | Per-field async validator in flight |
-| `onChange` | `(value) => void` | Change handler |
+| `state.readOnly` | `boolean` | Effective readOnly (hook option OR field schema flag) |
+| `state.disabled` | `boolean` | Effective disabled (hook option OR field schema flag) |
+| `onChange` | `(value) => void` | Change handler. No-ops on readOnly/disabled fields. |
 | `onBlur` | `() => void` | Blur handler |
 | `visible` | `boolean` | False when hidden by `showIf` |
+| `custom` | `FieldCustomInfo \| undefined` | Present only for radio/select with `allowCustom: true`. See below. |
+
+### `FieldCustomInfo` (R2 — allowCustom)
+
+For radio and multi-select fields that declared `allowCustom: true`, `FieldProps.custom` surfaces the metadata a renderer needs to present an "Other…" affordance:
+
+```ts
+interface FieldCustomInfo {
+  allowed: boolean;      // always true when this object is present
+  label: string;         // field.customLabel ?? "Other"
+  placeholder?: string;  // field.customPlaceholder
+  isCustomValue: boolean; // true when current value is outside options
+}
+```
+
+Submission shape is unchanged: radio stays a single `string`, multi-select stays `string[]`. Values that coincide with an option value are treated as that option. Use the `resolveMultiSelectValue(field, values)` helper (re-exported from `@formloom/schema`) to split a submitted array into `{ selected, custom }` if you need the buckets separately.
+
+### `useFormloomWizard(options)` (R4)
+
+Thin headless wrapper over `useFormloom` that turns a schema's `sections` array into a linear stepper. Requires `sections`; throws at init if the schema is single-page.
+
+```tsx
+const wizard = useFormloomWizard({ schema, onSubmit });
+
+<ProgressBar value={wizard.currentStepIndex + 1} max={wizard.totalSteps} />
+{wizard.currentStep.visibleFields.map((f) => <FieldRenderer key={f.field.id} {...f} />)}
+<button onClick={wizard.back} disabled={wizard.isFirstStep}>Back</button>
+{wizard.isLastStep
+  ? <button onClick={wizard.handleSubmit}>Submit</button>
+  : <button onClick={wizard.next} disabled={!wizard.canGoNext}>Next</button>}
+```
+
+Returns the full `UseFormloomReturn` plus:
+
+| Property | Type | Description |
+|---|---|---|
+| `currentStepIndex` | `number` | Zero-based |
+| `totalSteps` | `number` | |
+| `currentStep` | `SectionProps` | Current section with visibility-aware fields |
+| `canGoNext` | `boolean` | True when every required visible field on the step is valid |
+| `canSkip` | `boolean` | True when the step has no required visible fields |
+| `isFirstStep` / `isLastStep` | `boolean` | |
+| `next()` | `() => Promise<void>` | Validate current step; advance on success, mark fields touched on failure |
+| `back()` | `() => void` | No-op at step 0 |
+| `skip()` | `() => void` | Throws when `canSkip` is false |
 
 ## Re-usable validation helpers
 
