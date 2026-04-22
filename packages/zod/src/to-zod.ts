@@ -142,18 +142,45 @@ function booleanToZod(_field: BooleanField): z.ZodTypeAny {
 }
 
 function radioToZod(field: RadioField): z.ZodTypeAny {
+  if (field.allowCustom === true) {
+    return applyPatternRefine(z.string(), field);
+  }
   const values = field.options.map((o) => o.value);
   if (values.length === 0) return z.string();
   return z.enum(values as [string, ...string[]]);
 }
 
 function selectToZod(field: SelectField): z.ZodTypeAny {
+  if (field.allowCustom === true) {
+    const entry = applyPatternRefine(z.string(), field);
+    return field.multiple === true ? z.array(entry) : entry;
+  }
   const values = field.options.map((o) => o.value);
   if (values.length === 0) {
     return field.multiple === true ? z.array(z.string()) : z.string();
   }
   const enumSchema = z.enum(values as [string, ...string[]]);
   return field.multiple === true ? z.array(enumSchema) : enumSchema;
+}
+
+function applyPatternRefine(
+  schema: z.ZodString,
+  field: RadioField | SelectField,
+): z.ZodTypeAny {
+  const pattern = field.validation?.pattern;
+  if (typeof pattern !== "string" || pattern.length === 0) return schema;
+  return schema.refine(
+    (value: unknown) => {
+      if (typeof value !== "string" || value === "") return true;
+      const result = safeRegexTest(pattern, value);
+      if (result.skipped) return true;
+      return result.matched;
+    },
+    {
+      message:
+        field.validation?.patternMessage ?? `${field.label} format is invalid`,
+    },
+  );
 }
 
 function numberToZod(field: NumberField): z.ZodTypeAny {

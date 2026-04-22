@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { FORMLOOM_SYSTEM_PROMPT, FORMLOOM_TEXT_PROMPT } from "../prompt";
 
-describe("FORMLOOM_SYSTEM_PROMPT (v1.1)", () => {
+describe("FORMLOOM_SYSTEM_PROMPT", () => {
   it("mentions every primitive field type", () => {
     for (const t of [
       "text",
@@ -25,8 +25,10 @@ describe("FORMLOOM_SYSTEM_PROMPT (v1.1)", () => {
     expect(FORMLOOM_SYSTEM_PROMPT).toMatch(/hints\.display/);
   });
 
-  it("stays within the 3 KB budget", () => {
-    expect(FORMLOOM_SYSTEM_PROMPT.length).toBeLessThan(3072);
+  it("stays within the 4 KB budget", () => {
+    // Raised from 3 KB in v1.2 to accommodate option descriptions, allowCustom,
+    // and hints.variant. Still comfortably prompt-cache-friendly.
+    expect(FORMLOOM_SYSTEM_PROMPT.length).toBeLessThan(4096);
   });
 });
 
@@ -35,7 +37,7 @@ describe("FORMLOOM_TEXT_PROMPT", () => {
     expect(FORMLOOM_TEXT_PROMPT).toMatch(/```formloom/);
   });
 
-  it("includes a concrete example", () => {
-    expect(FORMLOOM_TEXT_PROMPT).toMatch(/"version":\s*"1\.1"/);
+  it("includes a concrete example with the current schema version", () => {
+    expect(FORMLOOM_TEXT_PROMPT).toMatch(/"version":\s*"1\.2"/);
   });
 });

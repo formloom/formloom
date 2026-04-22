@@ -17,9 +17,9 @@ export const FORMLOOM_PARAMETERS = {
   properties: {
     version: {
       type: "string",
-      enum: ["1.0", "1.1"],
+      enum: ["1.0", "1.1", "1.2"],
       description:
-        "Schema version. Use '1.1' for new schemas; '1.0' is accepted for backward compatibility.",
+        "Schema version. Use '1.2' for new schemas; '1.0' and '1.1' are accepted for backward compatibility.",
     },
     title: {
       type: "string",
@@ -79,13 +79,18 @@ export const FORMLOOM_PARAMETERS = {
           options: {
             type: "array",
             description:
-              "Options for radio and select fields. Each must have value and label.",
+              "Options for radio and select fields. Each must have value and label; description is an optional one-sentence sub-label.",
             items: {
               type: "object",
               required: ["value", "label"],
               properties: {
                 value: { type: "string" },
                 label: { type: "string" },
+                description: {
+                  type: "string",
+                  description:
+                    "Optional short sub-label shown with the label. Use for two-line options where the label alone would be cryptic.",
+                },
               },
             },
           },
@@ -93,6 +98,31 @@ export const FORMLOOM_PARAMETERS = {
             type: "boolean",
             description:
               "For select fields: allow multiple selections. For file fields: allow multiple files.",
+          },
+          allowCustom: {
+            type: "boolean",
+            description:
+              "For radio and select: accept freeform values outside the options list. Use when the option set is plausible but not exhaustive.",
+          },
+          customLabel: {
+            type: "string",
+            description:
+              "Label for the freeform input when allowCustom is true. Defaults to 'Other'.",
+          },
+          customPlaceholder: {
+            type: "string",
+            description:
+              "Placeholder for the freeform input when allowCustom is true.",
+          },
+          readOnly: {
+            type: "boolean",
+            description:
+              "Render the field as a non-editable summary. Typically set by the host, not the LLM.",
+          },
+          disabled: {
+            type: "boolean",
+            description:
+              "Render the field as disabled. Typically set by the host, not the LLM.",
           },
           accept: {
             type: "string",
@@ -142,8 +172,15 @@ export const FORMLOOM_PARAMETERS = {
           hints: {
             type: "object",
             description:
-              "Optional rendering hints. Canonical keys: display (textarea|password|toggle|stepper), width (full|half|third), rows (integer), autocomplete (HTML token). Unknown hints pass through.",
+              "Optional rendering hints. Canonical keys: display (textarea|password|toggle|stepper), width (full|half|third), rows (integer), autocomplete (HTML token), variant (opaque host-defined widget key, e.g. 'combobox'). Unknown hints pass through.",
             additionalProperties: true,
+            properties: {
+              variant: {
+                type: "string",
+                description:
+                  "Host-defined widget variant. Only emit a variant the host has told you it supports.",
+              },
+            },
           },
           showIf: {
             description:

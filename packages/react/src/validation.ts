@@ -32,6 +32,19 @@ export function validateField(
   if (field.type === "text" || field.type === "date") {
     return validateStringPattern(field, value);
   }
+  if (field.type === "radio" && field.allowCustom === true) {
+    return validateStringPattern(field, value);
+  }
+  if (field.type === "select" && field.allowCustom === true) {
+    if (field.multiple === true && Array.isArray(value)) {
+      for (const entry of value) {
+        const err = validateStringPattern(field, entry);
+        if (err !== null) return err;
+      }
+      return null;
+    }
+    return validateStringPattern(field, value);
+  }
   return null;
 }
 

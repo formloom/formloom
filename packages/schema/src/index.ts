@@ -36,7 +36,11 @@ export type {
   CanonicalHintEntry,
   CanonicalDisplayHint,
   CanonicalWidthHint,
+  FieldHints,
 } from "./hints";
+
+// Custom-value helpers (radio/select with allowCustom)
+export { resolveMultiSelectValue, isRadioCustomValue } from "./resolve-custom";
 
 // showIf
 export { evaluateShowIf, collectShowIfDependencies, findShowIfCycle } from "./show-if";

@@ -109,8 +109,12 @@ function validateSingle(
     case "boolean":
       return typeof value === "boolean" ? null : `${field.label} must be a boolean`;
     case "radio": {
+      if (typeof value !== "string") return `${field.label} must be a string`;
+      if (field.allowCustom === true) {
+        return checkPattern(field, value);
+      }
       const allowed = field.options.map((o) => o.value);
-      if (typeof value !== "string" || !allowed.includes(value)) {
+      if (!allowed.includes(value)) {
         return `${field.label} must be one of: ${allowed.join(", ")}`;
       }
       return null;
@@ -122,13 +126,23 @@ function validateSingle(
           return `${field.label} must be an array`;
         }
         for (const entry of value) {
-          if (typeof entry !== "string" || !allowed.includes(entry)) {
+          if (typeof entry !== "string") {
             return `${field.label} contains invalid option "${String(entry)}"`;
+          }
+          if (field.allowCustom === true) {
+            const patternErr = checkPattern(field, entry);
+            if (patternErr !== null) return patternErr;
+          } else if (!allowed.includes(entry)) {
+            return `${field.label} contains invalid option "${entry}"`;
           }
         }
         return null;
       }
-      if (typeof value !== "string" || !allowed.includes(value)) {
+      if (typeof value !== "string") return `${field.label} must be a string`;
+      if (field.allowCustom === true) {
+        return checkPattern(field, value);
+      }
+      if (!allowed.includes(value)) {
         return `${field.label} must be one of: ${allowed.join(", ")}`;
       }
       return null;
@@ -178,6 +192,19 @@ function validateSingle(
       return null;
     }
   }
+}
+
+function checkPattern(
+  field: { validation?: { pattern?: string; patternMessage?: string }; label: string },
+  value: string,
+): string | null {
+  const pattern = field.validation?.pattern;
+  if (typeof pattern !== "string" || pattern.length === 0 || value === "") {
+    return null;
+  }
+  const result = safeRegexTest(pattern, value);
+  if (result.skipped || result.matched) return null;
+  return field.validation?.patternMessage ?? `${field.label} format is invalid`;
 }
 
 function isFileValue(v: unknown): v is { kind: string; name: string; mime: string; size: number } {

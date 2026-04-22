@@ -117,7 +117,17 @@ import {
 } from "@formloom/llm";
 ```
 
-v1.1 ships these as lean exports. Deep integration (`tool_choice`, `formatSubmission`) is OpenAI + Anthropic for this release.
+Gemini, Mistral, and Ollama ship as lean exports. Deep integration (`tool_choice`, `formatSubmission`) is OpenAI + Anthropic for now.
+
+## What's new in v1.2
+
+The system prompt and tool parameter schema now teach every v1.2 schema feature:
+
+- **Option descriptions** — radio/select options can carry a one-line `description` sub-label.
+- **`allowCustom` on radio/select** — the model knows when to open a freeform "Other…" input for plausible-but-not-exhaustive option sets (`"What CRM?"`).
+- **`hints.variant`** — opaque host-defined widget key the host advertises to the model; emit it only when the host supports the variant.
+
+`FORMLOOM_PARAMETERS` admits these fields plus `readOnly` / `disabled` on any field (typically host-set, not LLM-emitted). Existing `FORMLOOM_TEXT_PROMPT` + parser accept v1.0, v1.1, and v1.2 schemas interchangeably.
 
 ## `formatSubmission` — the return path
 

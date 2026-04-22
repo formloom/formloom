@@ -3,9 +3,12 @@ import type {
   FormField,
   FormloomData,
   FormloomFieldValue,
+  RadioField,
+  SelectField,
 } from "@formloom/schema";
 import { evaluateShowIf } from "@formloom/schema";
 import type {
+  FieldCustomInfo,
   FieldProps,
   SectionProps,
   UseFormloomOptions,
@@ -18,11 +21,16 @@ import {
 } from "./async-validators";
 
 export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
-  const { schema, onSubmit, onError } = options;
+  const { schema, onSubmit, onError, readOnly, disabled } = options;
 
   // Mount-only captures — passing new references across renders must not reset state.
   const initialValuesRef = useRef(options.initialValues);
   const validatorsRef = useRef(options.validators);
+
+  // Latest onValueChange captured by ref so callers can pass a fresh closure
+  // per render without risking stale references inside memoised handlers.
+  const onValueChangeRef = useRef(options.onValueChange);
+  onValueChangeRef.current = options.onValueChange;
 
   const defaultValues = useMemo(() => {
     const defaults: FormloomData = {};
@@ -142,22 +150,30 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
 
   const handleChange = useCallback(
     (fieldId: string, value: FormloomFieldValue) => {
+      const field = schema.fields.find((f) => f.id === fieldId);
+      // Safety net: renderers should enforce readOnly/disabled themselves,
+      // but if one forgets the hook refuses the mutation so submitted data
+      // stays authoritative.
+      if (field !== undefined && isFieldLocked(field, readOnly, disabled)) {
+        return;
+      }
       setValues((prev) => {
         const next = { ...prev, [fieldId]: value };
         setTouched((currentTouched) => {
-          if (currentTouched[fieldId] === true) {
-            const field = schema.fields.find((f) => f.id === fieldId);
-            if (field !== undefined) {
-              writeError(fieldId, validateField(field, value));
-            }
+          if (currentTouched[fieldId] === true && field !== undefined) {
+            writeError(fieldId, validateField(field, value));
           }
           return currentTouched;
         });
         scheduleAsync(fieldId, value, next, "onChange");
+        // Fire user-change callback after state commit queued but before
+        // async validation settles. Synchronous by design — consumers
+        // debounce in userland if they need batching.
+        onValueChangeRef.current?.(fieldId, value, next);
         return next;
       });
     },
-    [schema, scheduleAsync, writeError],
+    [schema, scheduleAsync, writeError, readOnly, disabled],
   );
 
   const handleBlur = useCallback(
@@ -182,22 +198,36 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
       schema.fields.map<FieldProps>((field) => {
         const visible = visibility[field.id] !== false;
         const syncError = visible ? errors[field.id] ?? null : null;
+        const value = values[field.id] ?? null;
         return {
           field,
           state: {
-            value: values[field.id] ?? null,
+            value,
             error: syncError,
             touched: touched[field.id] ?? false,
             isValid: syncError === null,
             isValidating: validating[field.id] === true,
+            readOnly: resolveReadOnly(field, readOnly),
+            disabled: resolveDisabled(field, disabled),
           },
-          onChange: (value: FormloomFieldValue) =>
-            handleChange(field.id, value),
+          onChange: (next: FormloomFieldValue) => handleChange(field.id, next),
           onBlur: () => handleBlur(field.id),
           visible,
+          custom: deriveCustomInfo(field, value),
         };
       }),
-    [schema, values, errors, touched, validating, visibility, handleChange, handleBlur],
+    [
+      schema,
+      values,
+      errors,
+      touched,
+      validating,
+      visibility,
+      handleChange,
+      handleBlur,
+      readOnly,
+      disabled,
+    ],
   );
 
   const visibleFields = useMemo(
@@ -234,6 +264,12 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
   // ---- Submit ----
 
   const handleSubmit = useCallback(async (): Promise<void> => {
+    // When the whole form is locked, submission is a no-op. Read-only and
+    // disabled share this behaviour — the distinction is presentation, not
+    // semantics. Per-field locks don't block submission; renderers that
+    // want to gate per-field should check `state.readOnly` themselves.
+    if (readOnly === true || disabled === true) return;
+
     // Only mark visible fields as touched — invisible fields may become
     // visible later, and marking them now would immediately show errors on
     // stale values as soon as they appear.
@@ -292,7 +328,17 @@ export function useFormloom(options: UseFormloomOptions): UseFormloomReturn {
     } finally {
       setIsSubmitting(false);
     }
-  }, [schema, values, visibility, onSubmit, onError, scheduleAsync, writeErrors]);
+  }, [
+    schema,
+    values,
+    visibility,
+    onSubmit,
+    onError,
+    scheduleAsync,
+    writeErrors,
+    readOnly,
+    disabled,
+  ]);
 
   const reset = useCallback(() => {
     setValues({ ...defaultValues });
@@ -379,4 +425,59 @@ function getEmptyValue(field: FormField): FormloomFieldValue {
     default:
       return null;
   }
+}
+
+function resolveReadOnly(
+  field: FormField,
+  hookReadOnly: boolean | undefined,
+): boolean {
+  // Per-field setting (including an explicit `false`) wins over the hook.
+  if (field.readOnly !== undefined) return field.readOnly;
+  return hookReadOnly === true;
+}
+
+function resolveDisabled(
+  field: FormField,
+  hookDisabled: boolean | undefined,
+): boolean {
+  if (field.disabled !== undefined) return field.disabled;
+  return hookDisabled === true;
+}
+
+function isFieldLocked(
+  field: FormField,
+  hookReadOnly: boolean | undefined,
+  hookDisabled: boolean | undefined,
+): boolean {
+  return (
+    resolveReadOnly(field, hookReadOnly) || resolveDisabled(field, hookDisabled)
+  );
+}
+
+function deriveCustomInfo(
+  field: FormField,
+  value: FormloomFieldValue,
+): FieldCustomInfo | undefined {
+  if (field.type !== "radio" && field.type !== "select") return undefined;
+  const allowed = (field as RadioField | SelectField).allowCustom === true;
+  if (!allowed) return undefined;
+  const optionValues = new Set(
+    (field as RadioField | SelectField).options.map((o) => o.value),
+  );
+  let isCustomValue = false;
+  if (field.type === "select" && field.multiple === true) {
+    if (Array.isArray(value)) {
+      isCustomValue = value.some(
+        (v) => typeof v === "string" && !optionValues.has(v),
+      );
+    }
+  } else if (typeof value === "string" && value !== "") {
+    isCustomValue = !optionValues.has(value);
+  }
+  return {
+    allowed: true,
+    label: (field as RadioField | SelectField).customLabel ?? "Other",
+    placeholder: (field as RadioField | SelectField).customPlaceholder,
+    isCustomValue,
+  };
 }

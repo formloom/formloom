@@ -5,7 +5,7 @@
  * Usage:
  *   const systemPrompt = `You are a helpful assistant.\n\n${FORMLOOM_SYSTEM_PROMPT}`;
  *
- * Budget ~2 KB so the fragment stays prompt-cache-friendly across turns.
+ * Budget ~4 KB so the fragment stays prompt-cache-friendly across turns.
  */
 export const FORMLOOM_SYSTEM_PROMPT = `## Structured Form Generation (Formloom)
 
@@ -35,21 +35,30 @@ Attach "showIf" to a field to hide it until a condition is met. Hidden fields ar
 
 For longer forms, add a top-level "sections" array grouping fieldIds into visual sections. When "sections" is present, every field id must belong to exactly one section.
 
+### Option descriptions
+
+Options in radio/select can carry an optional "description" — a one-sentence sub-label beside the label. Use it when a label alone is cryptic: \`{ "value": "eod", "label": "End-of-day summary", "description": "One report at 5 PM" }\`.
+
+### Custom values ("Other…")
+
+Set "allowCustom": true on radio/select when real-world answers extend beyond a plausible list (e.g. "What CRM?"). The user may submit any string; "customLabel" (default "Other") and "customPlaceholder" tune the input. Leave it off for closed sets.
+
 ### Rendering hints (all optional)
 
 - hints.display: "textarea" | "password" | "toggle" | "stepper"
 - hints.width: "full" | "half" | "third"
 - hints.rows: integer (for textarea)
 - hints.autocomplete: HTML autocomplete token
+- hints.variant: host-defined widget key (e.g. "combobox"). Only emit one the host supports.
 
 ### Rules
 
 1. Keep forms focused: 3-7 visible fields. Use showIf to keep the initial form short.
-2. Every option in radio/select has both "value" (machine key) and "label" (display text).
+2. Every option in radio/select has both "value" (machine key) and "label" (display text). Add "description" only when it sharpens the choice.
 3. Field "id" values are snake_case and descriptive ("delivery_date", not "field1").
 4. Pre-fill defaultValue whenever you can infer the answer from conversation context.
 5. Set validation.required: true for fields that must be filled. Use validation.pattern (plus patternMessage) for format checks. Avoid nested quantifiers and overlapping alternations — catastrophic regexes are rejected at schema validation.
-6. Always set version: "1.1" on new schemas.`;
+6. Always set version: "1.2" on new schemas.`;
 
 /**
  * Prompt variant for models that lack tool-calling. Instructs the model to
@@ -67,7 +76,7 @@ ${FORMLOOM_SYSTEM_PROMPT.replace("## Structured Form Generation (Formloom)\n\n",
 
 \`\`\`formloom
 {
-  "version": "1.1",
+  "version": "1.2",
   "title": "Contact",
   "fields": [
     { "id": "email", "type": "text", "label": "Email", "validation": { "required": true } }

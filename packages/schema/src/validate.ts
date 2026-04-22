@@ -164,6 +164,23 @@ export function validateSchema(
       validateShowIfRule(f.showIf, `${prefix}.showIf`, errors);
     }
 
+    if (f.hints !== undefined) {
+      validateHints(f.hints, prefix, errors);
+    }
+
+    if (f.readOnly !== undefined && typeof f.readOnly !== "boolean") {
+      errors.push({
+        path: `${prefix}.readOnly`,
+        message: "readOnly must be a boolean",
+      });
+    }
+    if (f.disabled !== undefined && typeof f.disabled !== "boolean") {
+      errors.push({
+        path: `${prefix}.disabled`,
+        message: "disabled must be a boolean",
+      });
+    }
+
     switch (f.type) {
       case "text":
         validateTextField(f, prefix, errors);
@@ -413,7 +430,65 @@ function validateOptions(
         message: "option label must be a non-empty string",
       });
     }
+    if (o.description !== undefined && typeof o.description !== "string") {
+      errors.push({
+        path: `${optPrefix}.description`,
+        message: "option description must be a string",
+      });
+    }
   });
+}
+
+function validateAllowCustomProps(
+  f: Record<string, unknown>,
+  prefix: string,
+  errors: ValidationError[],
+): void {
+  if (f.allowCustom !== undefined && typeof f.allowCustom !== "boolean") {
+    errors.push({
+      path: `${prefix}.allowCustom`,
+      message: "allowCustom must be a boolean",
+    });
+  }
+  if (f.customLabel !== undefined && typeof f.customLabel !== "string") {
+    errors.push({
+      path: `${prefix}.customLabel`,
+      message: "customLabel must be a string",
+    });
+  }
+  if (
+    f.customPlaceholder !== undefined &&
+    typeof f.customPlaceholder !== "string"
+  ) {
+    errors.push({
+      path: `${prefix}.customPlaceholder`,
+      message: "customPlaceholder must be a string",
+    });
+  }
+}
+
+function validateHints(
+  hints: unknown,
+  prefix: string,
+  errors: ValidationError[],
+): void {
+  if (hints === null || typeof hints !== "object" || Array.isArray(hints)) {
+    errors.push({
+      path: `${prefix}.hints`,
+      message: "hints must be a non-null object",
+    });
+    return;
+  }
+  const h = hints as Record<string, unknown>;
+  if (h.variant !== undefined && typeof h.variant !== "string") {
+    errors.push({
+      path: `${prefix}.hints.variant`,
+      message: "hints.variant must be a string",
+    });
+  }
+  // Other canonical hints are checked only when their renderer cares; unknown
+  // keys intentionally pass through so hosts can ship extensions without
+  // minor-version bumps.
 }
 
 function validateTextField(
@@ -460,6 +535,7 @@ function validateRadioField(
       message: "defaultValue must be a string for radio fields",
     });
   }
+  validateAllowCustomProps(f, prefix, errors);
 }
 
 function validateSelectField(
@@ -492,6 +568,7 @@ function validateSelectField(
       });
     }
   }
+  validateAllowCustomProps(f, prefix, errors);
 }
 
 function validateDateField(

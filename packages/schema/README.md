@@ -14,7 +14,7 @@ A Formloom schema is a JSON object with this shape:
 
 ```json
 {
-  "version": "1.1",
+  "version": "1.2",
   "title": "Job Application",
   "description": "Tell us a bit about yourself",
   "submitLabel": "Submit",
@@ -193,7 +193,7 @@ validateSchema(schema, { forwardCompat: "lenient" });
 Any `1.x` version string is accepted. Export constants:
 
 ```ts
-FORMLOOM_SCHEMA_VERSION          // "1.1"
+FORMLOOM_SCHEMA_VERSION          // "1.2"
 FORMLOOM_MIN_SUPPORTED_VERSION   // "1.0"
 FIELD_TYPES                      // readonly ["text","boolean","radio","select","date","number","file"]
 ```
@@ -207,13 +207,13 @@ import {
   compareVersions,
 } from "@formloom/schema";
 
-parseSchemaVersion("1.1");       // { major: 1, minor: 1 }
+parseSchemaVersion("1.2");       // { major: 1, minor: 2 }
 parseSchemaVersion("not-a-ver"); // null — malformed input returns null instead of throwing
 
 isSupportedVersion("1.3", 1);    // true  — same major
 isSupportedVersion("2.0", 1);    // false — different major
 
-compareVersions({ major: 1, minor: 1 }, { major: 1, minor: 0 }); // positive: a > b
+compareVersions({ major: 1, minor: 2 }, { major: 1, minor: 0 }); // positive: a > b
 ```
 
 ## Safe regex
@@ -278,6 +278,7 @@ import type {
   FieldOption, ValidationRule, NumberValidationRule,
   RenderHints,
   CanonicalHints, CanonicalHintEntry, CanonicalDisplayHint, CanonicalWidthHint,
+  FieldHints,
   ShowIfRule,
 
   // Validator
@@ -289,6 +290,54 @@ import type {
   // Safe regex
   SafeRegexOptions, SafeRegexResult,
 } from "@formloom/schema";
+```
+
+## What's new in v1.2
+
+- **`FieldOption.description`** — optional one-line sub-label for radio/select options. Turns single-word labels into two-line choices without bloating the label itself.
+- **`allowCustom` on radio/select** — opt-in "Other…" freeform input. When `true`, options are treated as suggestions; the submitted value may be any string (or any `string[]` for `multiple: true`). Pattern validation still applies.
+  - Paired with `customLabel` (default `"Other"`) and `customPlaceholder` for the freeform input.
+  - Helpers: `resolveMultiSelectValue(field, values)` splits a submitted array into `{ selected, custom }`; `isRadioCustomValue(field, value)` identifies a freeform radio pick.
+- **`hints.variant`** — opaque host-defined widget key. The sanctioned extension point for custom field types (see below).
+- **`readOnly` / `disabled`** on any field — presentation flags passed straight through to renderers. Read `@formloom/react`'s hook-level options for the full story.
+
+## Custom field variants
+
+When a host ships a specialized widget that's shaped exactly like an existing primitive — a multi-select with search, a tool picker, an agent autocomplete — use `hints.variant` instead of forging a new field type. The schema stays canonical; the renderer keys off the variant.
+
+```json
+{
+  "id": "tools",
+  "type": "select",
+  "label": "Tools to enable",
+  "multiple": true,
+  "options": [
+    { "value": "jira", "label": "Jira" },
+    { "value": "linear", "label": "Linear" }
+  ],
+  "hints": { "variant": "tool-select" }
+}
+```
+
+Host renderer:
+
+```tsx
+function FieldRenderer({ field, state, onChange }: FieldProps) {
+  if (field.type === "select" && field.hints?.variant === "tool-select") {
+    return <ToolSelect field={field} value={state.value} onChange={onChange} />;
+  }
+  // …fall through to default widgets
+}
+```
+
+The schema validator accepts any string for `variant` and leaves the meaning to the host. Hosts can also declaration-merge `FieldHints` to get typed access:
+
+```ts
+declare module "@formloom/schema" {
+  interface FieldHints {
+    variant?: "tool-select" | "agent-picker" | "combobox";
+  }
+}
 ```
 
 ## License

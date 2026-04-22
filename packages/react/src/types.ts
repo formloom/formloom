@@ -20,6 +20,34 @@ export interface FieldState {
   isValid: boolean;
   /** True while an async validator is in flight for this field. */
   isValidating: boolean;
+  /**
+   * Effective read-only flag: true when either the hook-level `readOnly`
+   * option or this field's `readOnly` schema property is true. Renderers
+   * should present the field as a non-editable summary.
+   */
+  readOnly: boolean;
+  /**
+   * Effective disabled flag: true when either the hook-level `disabled`
+   * option or this field's `disabled` schema property is true. Renderers
+   * should grey out the input. Semantically distinct from `readOnly` only
+   * at the render layer; submission behaviour is identical.
+   */
+  disabled: boolean;
+}
+
+/**
+ * Metadata describing the freeform ("Other…") input surface for a
+ * radio/select field that has `allowCustom: true`.
+ */
+export interface FieldCustomInfo {
+  /** True when the field schema allows custom values. */
+  allowed: boolean;
+  /** Label for the freeform input. Falls back to "Other". */
+  label: string;
+  /** Placeholder for the freeform input. */
+  placeholder?: string;
+  /** True when the current value is outside the option set. */
+  isCustomValue: boolean;
 }
 
 /**
@@ -36,6 +64,12 @@ export interface FieldProps {
    * `fields` so consumer render logic keyed off the flat array stays stable.
    */
   visible: boolean;
+  /**
+   * Present when the field is a radio or select that was declared with
+   * `allowCustom: true`. Renderers use this to show an "Other…" affordance
+   * and detect when the current value is a freeform entry.
+   */
+  custom?: FieldCustomInfo;
 }
 
 /**
@@ -102,4 +136,30 @@ export interface UseFormloomOptions {
   initialValues?: Partial<FormloomData>;
   /** Per-field async validators. */
   validators?: Record<string, AsyncValidator>;
+  /**
+   * Called synchronously after every user-initiated field change, right
+   * after the state update commits and any same-tick sync validation runs.
+   * Useful for live-syncing form state to an LLM context as the user types.
+   *
+   * Not fired on `reset()`, on initial render, or on visibility changes —
+   * only on `handleChange` from a user interaction. Debounce in userland if
+   * needed; the hook deliberately stays synchronous.
+   */
+  onValueChange?: (
+    fieldId: string,
+    value: FormloomFieldValue,
+    data: FormloomData,
+  ) => void;
+  /**
+   * When true, every field renders as a non-editable summary. Per-field
+   * `readOnly` in the schema overrides this (a field with `readOnly: false`
+   * stays editable even when the hook is read-only). `handleSubmit` silently
+   * returns while this is true.
+   */
+  readOnly?: boolean;
+  /**
+   * When true, every field renders as disabled. Per-field `disabled`
+   * overrides this. `handleSubmit` silently returns while this is true.
+   */
+  disabled?: boolean;
 }

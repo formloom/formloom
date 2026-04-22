@@ -1,10 +1,10 @@
-import type { CanonicalHints } from "./hints";
+import type { FieldHints } from "./hints";
 
 /**
  * Schema version emitted by this library. Runtimes accept any `1.x` version,
- * so a v1.0 schema still validates under a v1.1 runtime and vice-versa.
+ * so a v1.0 schema still validates under a v1.2 runtime and vice-versa.
  */
-export const FORMLOOM_SCHEMA_VERSION = "1.1" as const;
+export const FORMLOOM_SCHEMA_VERSION = "1.2" as const;
 
 /** Oldest schema version this runtime knows how to read. */
 export const FORMLOOM_MIN_SUPPORTED_VERSION = "1.0" as const;
@@ -56,6 +56,12 @@ export interface FieldOption {
   value: string;
   /** Human-readable label displayed to user */
   label: string;
+  /**
+   * Optional short sub-label rendered alongside `label`. Useful when an
+   * option's meaning benefits from a one-sentence explanation. Renderers
+   * that don't support a secondary line can safely ignore this.
+   */
+  description?: string;
 }
 
 // ---- Rendering hints ----
@@ -64,8 +70,11 @@ export interface FieldOption {
  * Optional, open-ended rendering hints. Renderers honor hints they understand
  * and silently ignore unknown ones. See `CANONICAL_HINTS` for the blessed set.
  * New hints can ship in a minor version without a schema break.
+ *
+ * Alias of {@link FieldHints} — the declaration-mergeable extension point
+ * for host-defined hint keys.
  */
-export type RenderHints = CanonicalHints;
+export type RenderHints = FieldHints;
 
 // ---- Conditional visibility ----
 
@@ -100,6 +109,18 @@ export interface BaseField {
   hints?: RenderHints;
   /** Visibility rule. When false, the field is hidden and omitted from data. */
   showIf?: ShowIfRule;
+  /**
+   * When true, the field is presented in a non-editable summary form but its
+   * value is still included in submitted data. Hook-level `readOnly` applies
+   * to every field; a field-level setting overrides the hook.
+   */
+  readOnly?: boolean;
+  /**
+   * When true, the field is rendered as a disabled input. Same submission
+   * semantics as `readOnly`; the distinction is presentation-only (the hook
+   * passes both flags through to renderers unchanged).
+   */
+  disabled?: boolean;
 }
 
 export interface TextField extends BaseField {
@@ -117,6 +138,16 @@ export interface RadioField extends BaseField {
   type: "radio";
   options: FieldOption[];
   defaultValue?: string;
+  /**
+   * When true, the user may submit a freeform value outside `options`.
+   * Options become suggestions rather than a closed set; any string
+   * is accepted. `validation.pattern` still applies to the custom value.
+   */
+  allowCustom?: boolean;
+  /** Label for the freeform input when `allowCustom` is true. Default: "Other". */
+  customLabel?: string;
+  /** Placeholder for the freeform input. */
+  customPlaceholder?: string;
 }
 
 export interface SelectField extends BaseField {
@@ -125,6 +156,16 @@ export interface SelectField extends BaseField {
   multiple?: boolean;
   placeholder?: string;
   defaultValue?: string | string[];
+  /**
+   * When true, the user may submit values outside `options`. For
+   * `multiple: true` the submitted array may mix option values and
+   * freeform strings. `validation.pattern` still applies to custom values.
+   */
+  allowCustom?: boolean;
+  /** Label for the freeform input when `allowCustom` is true. Default: "Other". */
+  customLabel?: string;
+  /** Placeholder for the freeform input. */
+  customPlaceholder?: string;
 }
 
 export interface DateField extends BaseField {

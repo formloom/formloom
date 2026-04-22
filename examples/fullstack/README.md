@@ -7,7 +7,7 @@ An end-to-end chat app where an LLM dynamically generates forms in response to u
 - Chat interface where you type natural language messages
 - The LLM decides whether to respond with text or present a form
 - When a form is needed, the LLM calls the `formloom_collect` tool
-- The form renders inline in the chat using the headless `useFormloom` hook (all 7 v1.1 field types supported)
+- The form renders inline in the chat using the headless `useFormloom` hook (all 7 field-type primitives supported)
 - On submit, the app calls `formatSubmission` and sends the result back to the LLM
 - The LLM generates a natural-language follow-up acknowledging the submission
 
@@ -48,7 +48,7 @@ User: "I want to book an appointment"
 | File | Role |
 |------|------|
 | [src/App.tsx](src/App.tsx) | Chat UI. Tracks `toolCallId` + `originalUserMessage` per form message. When a form is submitted, it hits `/api/continue`. |
-| [src/FormloomForm.tsx](src/FormloomForm.tsx) | Renders every v1.1 field type: text, boolean, radio, select, date, number, file. Honours `sections`, `visibleFields`, textarea + password hints. |
+| [src/FormloomForm.tsx](src/FormloomForm.tsx) | Renders every field-type primitive: text, boolean, radio, select, date, number, file. Honours `sections`, `visibleFields`, textarea + password hints. |
 
 ## Setup
 

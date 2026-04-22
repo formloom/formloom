@@ -71,12 +71,25 @@ export const CANONICAL_HINT_VALUES = Object.freeze({
 /**
  * TypeScript shape of the canonical hints. Still permits unknown keys so
  * renderers can extend without a major version bump.
+ *
+ * The `variant` slot is the sanctioned extension point for host-specific
+ * widget types: Formloom validates only that it is a string, leaving the
+ * value opaque. Hosts can read `field.hints?.variant` and swap in any
+ * renderer they like without monkey-patching the schema or inventing a new
+ * top-level field `type`.
  */
 export interface CanonicalHints {
   display?: "textarea" | "password" | "toggle" | "stepper";
   width?: "full" | "half" | "third";
   rows?: number;
   autocomplete?: string;
+  /**
+   * Opaque host-defined widget variant, e.g. "combobox", "tool-select",
+   * "agent-picker". Formloom does not validate the value — the host decides
+   * what strings mean. Use this in preference to adding top-level field
+   * types for UI-only specialisations.
+   */
+  variant?: string;
   [key: string]: unknown;
 }
 
@@ -85,3 +98,21 @@ export type CanonicalDisplayHint = (typeof CANONICAL_HINT_VALUES.display)[number
 
 /** Literal union of the canonical `width` hints. */
 export type CanonicalWidthHint = (typeof CANONICAL_HINT_VALUES.width)[number];
+
+/**
+ * Public, declaration-mergeable extension point for field rendering hints.
+ * Hosts that ship custom widgets can augment this interface to get typed
+ * access to their own hint keys:
+ *
+ * ```ts
+ * declare module "@formloom/schema" {
+ *   interface FieldHints {
+ *     variant?: "tool-select" | "agent-picker";
+ *   }
+ * }
+ * ```
+ *
+ * Formloom itself only validates {@link CanonicalHints} and the opaque
+ * `variant` string; unknown keys pass through unchanged.
+ */
+export interface FieldHints extends CanonicalHints {}

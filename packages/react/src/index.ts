@@ -1,11 +1,17 @@
 export { useFormloom } from "./use-formloom";
 export { useFormloomField } from "./use-formloom-field";
+export { useFormloomWizard } from "./use-formloom-wizard";
+export type {
+  UseFormloomWizardOptions,
+  UseFormloomWizardReturn,
+} from "./use-formloom-wizard";
 
 export type {
   UseFormloomReturn,
   UseFormloomOptions,
   FieldProps,
   FieldState,
+  FieldCustomInfo,
   SectionProps,
   AsyncValidator,
   AsyncValidatorConfig,
@@ -23,6 +29,11 @@ export type {
   FormloomFileValue,
   FormField,
   FieldOption,
+  FieldHints,
   Section,
   ShowIfRule,
+} from "@formloom/schema";
+export {
+  resolveMultiSelectValue,
+  isRadioCustomValue,
 } from "@formloom/schema";

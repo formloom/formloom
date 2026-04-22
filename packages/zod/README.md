@@ -90,15 +90,22 @@ if ("value" in result) {
 | `text` | `z.string()` + regex refine via `safeRegexTest` |
 | `date` | `z.string()` + ISO 8601 pattern |
 | `boolean` | `z.boolean()` |
-| `radio` | `z.enum(options.map(o => o.value))` |
-| `select` (single) | `z.enum(...)` |
-| `select` (multiple) | `z.array(z.enum(...))` |
+| `radio` (closed set) | `z.enum(options.map(o => o.value))` |
+| `radio` with `allowCustom` | `z.string()` + optional pattern refine |
+| `select` (single, closed) | `z.enum(...)` |
+| `select` (multi, closed) | `z.array(z.enum(...))` |
+| `select` with `allowCustom` | `z.string()` (single) or `z.array(z.string())` (multi); pattern refine applies per entry |
 | `number` | `z.number()` + min/max/int/step |
 | `file` | `z.object({ kind, name, mime, size, dataUrl?, url? })` |
 
 Required-ness is enforced at the object level via `.superRefine`, so `showIf`-gated fields only become required when their rule evaluates true against the same object.
 
 Regex patterns go through `safeRegexTest` so catastrophic patterns never hang Zod parsing.
+
+## v1.2 notes
+
+- `allowCustom` relaxes radio/select to accept freeform strings, but `validation.pattern` is still applied — including to each entry of a multi-select array.
+- `BaseField.readOnly` / `BaseField.disabled` are presentation-only flags; they do not alter the generated Zod shape or Standard Schema validator.
 
 ## License
 
