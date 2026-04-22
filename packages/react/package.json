@@ -1,6 +1,6 @@
 {
   "name": "@formloom/react",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Headless React hooks for rendering Formloom schemas — visibility, sections, async validators, file handling",
   "license": "MIT",
   "author": "Formloom contributors",

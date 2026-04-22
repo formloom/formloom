@@ -1,6 +1,6 @@
 {
   "name": "@formloom/schema",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Schema spec and validator for Formloom - LLM-driven dynamic form generation",
   "license": "MIT",
   "author": "Formloom contributors",
