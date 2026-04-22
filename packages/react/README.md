@@ -110,28 +110,36 @@ const uploadHandler: UploadHandler = async (file) => {
 
 ### Async validators
 
+Each entry in `validators` can be either a bare function (runs on blur) or an `AsyncValidatorConfig` object:
+
 ```ts
+import type { AsyncValidator, AsyncValidatorConfig } from "@formloom/react";
+
 useFormloom({
   schema,
   onSubmit,
   validators: {
+    // Config form — useful when you want onChange + debounce
     username: {
       validate: async (value) => {
         const res = await fetch(`/api/usernames/${value}`);
         return res.ok ? null : "Username is taken";
       },
-      mode: "onChange",
+      mode: "onChange",    // "onBlur" (default) | "onChange"
       debounceMs: 400,
     },
+    // Bare-function form — runs on blur
     email: async (value) => {
-      // bare-function form runs on blur by default
       return value === "blocked@example.com" ? "Blocked domain" : null;
     },
   },
 });
 ```
 
-The submit path awaits all in-flight async validators before invoking `onSubmit`. Track per-field and form-wide state via `state.isValidating` and `form.isValidating`.
+- Return `null` if the value is valid, or a string message if not.
+- The validator receives the field's current value and the full `FormloomData` as a second argument if you need cross-field context.
+- `handleSubmit` awaits all in-flight async validators before invoking `onSubmit`. Failures become entries in the returned `errors` array.
+- Track per-field and form-wide pending state via `state.isValidating` and `form.isValidating`.
 
 ## Per-field hook
 

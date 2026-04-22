@@ -112,6 +112,20 @@ Attach a `showIf` rule to any field. Hidden fields are excluded from submitted d
 
 Dependency cycles and references to unknown fields are caught at validation time.
 
+The package exports three helpers so custom renderers and servers can share the same semantics as the React hook:
+
+```ts
+import {
+  evaluateShowIf,
+  collectShowIfDependencies,
+  findShowIfCycle,
+} from "@formloom/schema";
+
+evaluateShowIf(field.showIf, currentData);     // boolean
+collectShowIfDependencies(field.showIf);       // Set<string> of referenced field ids
+findShowIfCycle(schema.fields);                // string[] (e.g. ["a","b","a"]) or null
+```
+
 ### Sections
 
 Optional top-level grouping. When `sections` is present, **every** field id must belong to exactly one section.
@@ -153,6 +167,17 @@ if (result.valid) {
 
 Collects **all** errors rather than failing on the first one.
 
+If you prefer a throw-on-invalid style, wrap the result:
+
+```ts
+import { validateSchema, FormloomValidationError } from "@formloom/schema";
+
+const result = validateSchema(maybeSchema);
+if (!result.valid) throw new FormloomValidationError(result.errors);
+```
+
+`FormloomValidationError` extends `Error` with an `errors: ValidationError[]` property and a pre-formatted message listing every issue.
+
 ### Forward compatibility
 
 A v1.5 schema emitted by a newer LLM may contain a field type this runtime doesn't know. Control the behaviour via the `forwardCompat` option:
@@ -170,31 +195,99 @@ Any `1.x` version string is accepted. Export constants:
 ```ts
 FORMLOOM_SCHEMA_VERSION          // "1.1"
 FORMLOOM_MIN_SUPPORTED_VERSION   // "1.0"
+FIELD_TYPES                      // readonly ["text","boolean","radio","select","date","number","file"]
+```
+
+Helpers for working with version strings:
+
+```ts
+import {
+  parseSchemaVersion,
+  isSupportedVersion,
+  compareVersions,
+} from "@formloom/schema";
+
+parseSchemaVersion("1.1");       // { major: 1, minor: 1 }
+parseSchemaVersion("not-a-ver"); // null — malformed input returns null instead of throwing
+
+isSupportedVersion("1.3", 1);    // true  — same major
+isSupportedVersion("2.0", 1);    // false — different major
+
+compareVersions({ major: 1, minor: 1 }, { major: 1, minor: 0 }); // positive: a > b
 ```
 
 ## Safe regex
 
-LLM-authored regex patterns are passed to `safeRegexTest`, which rejects catastrophic shapes (nested quantifiers, overlapping alternations, backrefs) and caps input length. It never hangs and never throws.
+LLM-authored regex patterns are passed to `safeRegexTest`, which detects catastrophic shapes (nested quantifiers, overlapping alternations, backrefs) and caps input length. It never hangs and never throws.
 
 ```ts
-import { safeRegexTest, isCatastrophicPattern } from "@formloom/schema";
+import {
+  safeRegexTest,
+  isCatastrophicPattern,
+  isValidRegexSyntax,
+  DEFAULT_MAX_INPUT_LENGTH,
+} from "@formloom/schema";
 
 const result = safeRegexTest(pattern, value);
-// { matched, skipped, reason }
+// { matched: boolean, skipped: boolean, reason?: string }
+//
+// skipped = true when:
+//   - the pattern is syntactically invalid
+//   - the pattern matches a known catastrophic shape
+//   - the input exceeds DEFAULT_MAX_INPUT_LENGTH (10 KB by default)
+
+isCatastrophicPattern("(a+)+");       // true
+isValidRegexSyntax("^[a-z]+$");       // true
+```
+
+Pass `{ maxInputLength }` as the third argument to change the cap per-call.
+
+## File matching
+
+Every layer of Formloom (validator, React hook, Zod adapter) uses the same accept-string matcher, so behaviour is identical across the stack.
+
+```ts
+import { fileMatchesAccept, mimeMatches } from "@formloom/schema";
+
+fileMatchesAccept("image/*,.pdf", "image/png", "photo.png");      // true
+fileMatchesAccept("image/*,.pdf", "application/pdf", "cv.pdf");   // true (via .pdf)
+
+// mimeMatches is MIME-only — extension tokens are ignored because
+// there is no filename context. Prefer fileMatchesAccept when you have a name.
+mimeMatches("image/png", "image/*");         // true
+mimeMatches("application/pdf", ".pdf");      // false
 ```
 
 ## TypeScript types
 
 ```ts
 import type {
+  // Schema shape
   FormloomSchema,
+  Section,
+  FieldType,
+  BaseField,
   FormField,
-  TextField, BooleanField, RadioField, SelectField, DateField,
-  NumberField, FileField,
+  TextField, BooleanField, RadioField, SelectField,
+  DateField, NumberField, FileField,
+
+  // Values
   FormloomData, FormloomFieldValue, FormloomFileValue,
+
+  // Per-field bits
   FieldOption, ValidationRule, NumberValidationRule,
-  RenderHints, CanonicalHints,
-  Section, ShowIfRule,
+  RenderHints,
+  CanonicalHints, CanonicalHintEntry, CanonicalDisplayHint, CanonicalWidthHint,
+  ShowIfRule,
+
+  // Validator
+  ValidationResult, ValidationError, ValidationWarning, ValidateOptions,
+
+  // Version helpers
+  ParsedVersion,
+
+  // Safe regex
+  SafeRegexOptions, SafeRegexResult,
 } from "@formloom/schema";
 ```
 
