@@ -166,6 +166,8 @@ const result = parseFormloomResponse(input);
 
 ## Exports
 
+### Values
+
 | Export | Description |
 |--------|-------------|
 | `FORMLOOM_SYSTEM_PROMPT` | System prompt for tool-call flows |
@@ -173,9 +175,24 @@ const result = parseFormloomResponse(input);
 | `FORMLOOM_TOOL_OPENAI` / `_ANTHROPIC` / `_GEMINI` / `_MISTRAL` / `_OLLAMA` | Provider tool definitions |
 | `FORMLOOM_RESPONSE_FORMAT_OPENAI` | OpenAI `response_format` wrapper |
 | `FORMLOOM_PARAMETERS` | Canonical JSON Schema for the tool parameters |
+| `FORMLOOM_TOOL_NAME` | The tool name string (`"formloom_collect"`) — match against `toolCall.function.name` |
+| `FORMLOOM_TOOL_DESCRIPTION` | The tool description string (useful if you build your own tool definition for an unlisted provider) |
 | `parseFormloomResponse` | Extract and validate a schema from LLM output |
 | `formatSubmission` / `formatSubmissionError` | Wrap submitted data as a provider tool response |
 | `toolChoice.openai()` / `toolChoice.anthropic()` | Force `formloom_collect` on a turn |
+
+### Types
+
+```ts
+import type {
+  ParseResult,                  // return type of parseFormloomResponse
+  SubmissionProvider,           // "openai" | "anthropic" | "generic"
+  AttachFilesMode,              // "inline" | "omit"
+  FormatSubmissionOptions,
+  FormattedSubmission,          // union covering openai/anthropic/generic shapes
+  FormatSubmissionErrorReason,  // { kind: "validation" | "cancelled" | "timeout", ... }
+} from "@formloom/llm";
+```
 
 ## License
 

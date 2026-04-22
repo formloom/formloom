@@ -38,12 +38,40 @@ formloomToZod(schema, {
 
 Every field is `.optional().nullable()` at the individual level, and required-ness is enforced via a top-level `.superRefine` that checks visibility. This matches the shape of `FormloomData` returned by `useFormloom`.
 
+Because `formloomToZod` returns a `ZodEffects`-wrapped object, you cannot reach `.shape` or `.extend()` on the result directly. If you need those, use `formloomToZodObject`.
+
+### `formloomToZodObject`
+
+Returns the bare `ZodObject` without the `superRefine` that enforces required-when-visible. Every field is still `.optional().nullable()`, so empty or hidden fields are accepted at the per-field level. Use this when you want to:
+
+- Read `.shape` to drive form generation from the Zod side.
+- Extend the object with additional keys via `.extend({ ... })`.
+- Compose it into a larger schema and apply your own required-ness rules.
+
+```ts
+import { formloomToZodObject } from "@formloom/zod";
+
+const base = formloomToZodObject(formloomSchema, { unknownKeys: "strict" });
+
+// Add extra fields your form doesn't cover:
+const extended = base.extend({
+  submittedAt: z.string().datetime(),
+  submittedBy: z.string().uuid(),
+});
+
+// Inspect the shape:
+Object.keys(base.shape); // ["email", "years_experience", ...]
+```
+
+If you just want to validate submitted data end-to-end, prefer `formloomToZod`.
+
 ### Standard Schema adapter
 
 Produces a [Standard Schema v1](https://standardschema.dev) validator. Works with any Standard-Schema-aware library (tRPC, react-hook-form, drizzle-zod, etc.) without a Zod dependency.
 
 ```ts
 import { formloomToStandardSchema } from "@formloom/zod";
+import type { StandardSchemaV1, StandardSchemaIssue } from "@formloom/zod";
 
 const std = formloomToStandardSchema(formloomSchema);
 
