@@ -8,17 +8,33 @@ import type {
   FormloomFieldValue,
   FormloomFileValue,
   FieldOption,
+  AsyncValidator,
 } from "@formloom/react";
 
 interface FormloomRendererProps {
   schema: FormloomSchema;
   onSubmit: (data: FormloomData) => void | Promise<void>;
+  onValueChange?: (fieldId: string, value: FormloomFieldValue, data: FormloomData) => void;
+  validators?: Record<string, AsyncValidator>;
+  readOnly?: boolean;
+  disabled?: boolean;
 }
 
-export function FormloomRenderer({ schema, onSubmit }: FormloomRendererProps) {
+export function FormloomRenderer({
+  schema,
+  onSubmit,
+  onValueChange,
+  validators,
+  readOnly,
+  disabled,
+}: FormloomRendererProps) {
   const form = useFormloom({
     schema,
     onSubmit,
+    onValueChange,
+    validators,
+    readOnly,
+    disabled,
     onError: (errors) => {
       console.log("Validation errors:", errors);
     },
@@ -111,14 +127,23 @@ export function FormloomRenderer({ schema, onSubmit }: FormloomRendererProps) {
   );
 }
 
+export function FieldBody(props: FieldProps) {
+  return <FieldRenderer {...props} />;
+}
+
 function FieldRenderer(props: FieldProps) {
   const { field, state, onChange, onBlur, custom } = props;
   const hasError = state.touched && state.error !== null;
   const lock = state.readOnly || state.disabled;
 
+  const widthHint = field.hints?.width;
   const wrapperStyle: React.CSSProperties = {
     marginBottom: 16,
     opacity: state.disabled ? 0.6 : 1,
+    // `width` hint controls the column fraction. This example lays fields
+    // out vertically, so we cap maxWidth as an easily-visible demonstration.
+    maxWidth:
+      widthHint === "half" ? 280 : widthHint === "third" ? 180 : undefined,
   };
   const labelStyle: React.CSSProperties = {
     display: "block",
@@ -210,6 +235,7 @@ function FieldRenderer(props: FieldProps) {
           style={inputStyle}
           placeholder={field.placeholder}
           disabled={state.disabled}
+          autoComplete={field.hints?.autocomplete}
           value={(state.value as string | null) ?? ""}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -227,7 +253,11 @@ function FieldRenderer(props: FieldProps) {
         />
       )}
 
-      {field.type === "number" && (
+      {field.type === "number" && hintDisplay === "stepper" && (
+        <NumberStepper {...props} />
+      )}
+
+      {field.type === "number" && hintDisplay !== "stepper" && (
         <input
           type="number"
           style={inputStyle}
@@ -396,6 +426,59 @@ function FieldRenderer(props: FieldProps) {
       )}
 
       {hasError && <div style={errorStyle}>{state.error}</div>}
+      {state.isValidating && !hasError && (
+        <div style={{ color: "#2563eb", fontSize: 12, marginTop: 4 }}>
+          Checking…
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NumberStepper(props: FieldProps) {
+  const { field, state, onChange, onBlur } = props;
+  if (field.type !== "number") return null;
+  const step = field.validation?.step ?? (field.validation?.integer === true ? 1 : 1);
+  const current = typeof state.value === "number" ? state.value : 0;
+  const clamp = (v: number): number => {
+    const min = field.validation?.min;
+    const max = field.validation?.max;
+    if (typeof min === "number" && v < min) return min;
+    if (typeof max === "number" && v > max) return max;
+    return v;
+  };
+  const btn: React.CSSProperties = {
+    padding: "4px 10px",
+    border: "1px solid #d1d5db",
+    background: "#fff",
+    cursor: state.disabled ? "not-allowed" : "pointer",
+    borderRadius: 6,
+    fontSize: 14,
+    minWidth: 32,
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <button
+        type="button"
+        style={btn}
+        disabled={state.disabled}
+        onClick={() => onChange(clamp(current - step))}
+        onBlur={onBlur}
+      >
+        −
+      </button>
+      <span style={{ minWidth: 32, textAlign: "center", fontSize: 14 }}>
+        {current}
+      </span>
+      <button
+        type="button"
+        style={btn}
+        disabled={state.disabled}
+        onClick={() => onChange(clamp(current + step))}
+        onBlur={onBlur}
+      >
+        +
+      </button>
     </div>
   );
 }

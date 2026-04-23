@@ -78,6 +78,9 @@ importers:
       '@formloom/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      '@formloom/zod':
+        specifier: workspace:*
+        version: link:../../packages/zod
       '@langchain/core':
         specifier: ^0.3.0
         version: 0.3.80(openai@5.12.2(ws@8.20.0)(zod@3.25.76))
@@ -99,6 +102,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
     devDependencies:
       '@types/cors':
         specifier: ^2.8.17
