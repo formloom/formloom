@@ -214,3 +214,83 @@ export const FORMLOOM_TOOL_NAME = "formloom_collect";
 
 export const FORMLOOM_TOOL_DESCRIPTION =
   "Present a structured form to the user to collect information. Use this instead of asking questions in plain text when you need structured data. The tool returns clean, validated form data keyed by field id.";
+
+/**
+ * Produces a narrowed copy of {@link FORMLOOM_PARAMETERS} for a given
+ * capability profile. Provider tool definitions that wrap this result
+ * inherit the narrowing automatically.
+ *
+ * The returned object is a deep clone — mutating it never affects the
+ * default `FORMLOOM_PARAMETERS`. Passing an empty capabilities object is
+ * equivalent to a structured clone of the default (deep-equal; not
+ * reference-equal).
+ */
+import type { FormloomCapabilities } from "@formloom/schema";
+import { resolveFeatures } from "@formloom/schema";
+
+export function narrowParameters(caps: FormloomCapabilities = {}): unknown {
+  // Deep clone so we can freely mutate; structuredClone is globally
+  // available in every Node/runtime Formloom targets.
+  const out = structuredClone(FORMLOOM_PARAMETERS) as unknown as Record<
+    string,
+    unknown
+  >;
+  const properties = (out.properties as Record<string, unknown>) ?? {};
+
+  // ---- Field type allowlist ----
+  const fieldsNode = properties.fields as
+    | { items?: { properties?: Record<string, unknown> } }
+    | undefined;
+  const itemProps = fieldsNode?.items?.properties;
+  if (itemProps !== undefined && caps.fieldTypes !== undefined) {
+    const typeNode = itemProps.type as { enum?: unknown[] } | undefined;
+    if (typeNode !== undefined) {
+      typeNode.enum = [...caps.fieldTypes];
+    }
+  }
+
+  if (itemProps !== undefined) {
+    const features = resolveFeatures(caps);
+
+    if (!features.showIf) delete itemProps.showIf;
+    if (!features.allowCustom) {
+      delete itemProps.allowCustom;
+      delete itemProps.customLabel;
+      delete itemProps.customPlaceholder;
+    }
+    if (!features.readOnly) delete itemProps.readOnly;
+    if (!features.disabled) delete itemProps.disabled;
+
+    if (!features.optionDescriptions) {
+      const optionsNode = itemProps.options as
+        | { items?: { properties?: Record<string, unknown> } }
+        | undefined;
+      const optionProps = optionsNode?.items?.properties;
+      if (optionProps !== undefined) {
+        delete optionProps.description;
+      }
+    }
+
+    // ---- Variant policy ----
+    const hintsNode = itemProps.hints as
+      | {
+          properties?: Record<string, { type?: string; enum?: unknown[] }>;
+        }
+      | undefined;
+    const variantNode = hintsNode?.properties?.variant;
+    if (variantNode !== undefined) {
+      if (caps.variants === false) {
+        delete hintsNode!.properties!.variant;
+      } else if (Array.isArray(caps.variants) && caps.variants.length > 0) {
+        variantNode.enum = [...caps.variants];
+      }
+    }
+  }
+
+  // ---- Sections toggle ----
+  if (caps.features?.sections === false) {
+    delete properties.sections;
+  }
+
+  return out;
+}

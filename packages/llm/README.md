@@ -129,6 +129,42 @@ The system prompt and tool parameter schema now teach every v1.2 schema feature:
 
 `FORMLOOM_PARAMETERS` admits these fields plus `readOnly` / `disabled` on any field (typically host-set, not LLM-emitted). Existing `FORMLOOM_TEXT_PROMPT` + parser accept v1.0, v1.1, and v1.2 schemas interchangeably.
 
+## Narrowing for a surface (v1.3)
+
+Different LLM-form surfaces (intake, mid-run clarification, public pages) often want different UX contracts. A **capabilities bundle** lets a host declare what's allowed and derive a narrowed system prompt, tool JSON Schema, and validator from one declaration:
+
+```ts
+import { createFormloomCapabilities } from "@formloom/llm";
+
+const intake = createFormloomCapabilities({
+  fieldTypes: ["text", "select", "boolean"],
+  features: { showIf: false, allowCustom: true },
+  variants: ["combobox"],
+  maxFields: 7,
+});
+
+const response = await openai.chat.completions.create({
+  messages: [{ role: "system", content: intake.systemPrompt }, /* ... */],
+  tools: [intake.tool.openai],
+});
+
+const toolCall = response.choices[0].message.tool_calls?.[0];
+const result = intake.parse(toolCall.function.arguments);
+if (result.success) renderForm(result.schema);
+```
+
+`intake.systemPrompt` drops the sections for features you've disabled (token savings); `intake.tool.openai`, `.anthropic`, `.gemini`, `.mistral`, `.ollama`, and `.responseFormat` all wrap the narrowed `parameters` so the provider's structured-output layer enforces the subset; `intake.parse(input)` validates against the same capabilities and accepts `{ forwardCompat: "strict" | "lenient" }`.
+
+**Three gates in one declaration:**
+
+1. **Prompt** — narrowed system prompt (fewer tokens, clearer reasoning for the LLM).
+2. **Tool JSON Schema** — provider enforces `type.enum`, dropped properties, variant allowlist.
+3. **Validator** — `bundle.parse` rejects (or drops) anything that slipped through text-mode or copy-paste.
+
+Omit keys to allow; empty `createFormloomCapabilities({})` is equivalent to the default `FORMLOOM_SYSTEM_PROMPT` + `FORMLOOM_PARAMETERS`. The factory is pure — cache the bundle in userland if you construct the same one per request.
+
+**Public helpers** for power users: `buildSystemPrompt(caps)`, `buildTextPrompt(caps)`, and `narrowParameters(caps)` are all individually exported and can be composed outside the bundle.
+
 ## `formatSubmission` — the return path
 
 ```ts
@@ -190,17 +226,24 @@ const result = parseFormloomResponse(input);
 | `parseFormloomResponse` | Extract and validate a schema from LLM output |
 | `formatSubmission` / `formatSubmissionError` | Wrap submitted data as a provider tool response |
 | `toolChoice.openai()` / `toolChoice.anthropic()` | Force `formloom_collect` on a turn |
+| `createFormloomCapabilities` | **v1.3** — bundles a narrowed prompt + tool + parser for a surface |
+| `buildSystemPrompt` / `buildTextPrompt` | **v1.3** — render the system prompt fragments for a given `FormloomCapabilities` |
+| `narrowParameters` | **v1.3** — returns a narrowed clone of `FORMLOOM_PARAMETERS` |
+| `FULL_CAPABILITIES` | **v1.3** — re-exported from `@formloom/schema` for convenience |
 
 ### Types
 
 ```ts
 import type {
   ParseResult,                  // return type of parseFormloomResponse
+  ParseOptions,                 // v1.3 — { forwardCompat?, capabilities? }
   SubmissionProvider,           // "openai" | "anthropic" | "generic"
   AttachFilesMode,              // "inline" | "omit"
   FormatSubmissionOptions,
   FormattedSubmission,          // union covering openai/anthropic/generic shapes
   FormatSubmissionErrorReason,  // { kind: "validation" | "cancelled" | "timeout", ... }
+  FormloomCapabilities,         // v1.3 — re-exported from @formloom/schema
+  FormloomCapabilitiesBundle,   // v1.3 — return type of createFormloomCapabilities
 } from "@formloom/llm";
 ```
 

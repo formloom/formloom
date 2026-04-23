@@ -1,8 +1,15 @@
 import { FIELD_TYPES, FORMLOOM_MIN_SUPPORTED_VERSION } from "./types";
-import type { FormField, ShowIfRule } from "./types";
+import type { FormField, ShowIfRule, FieldType } from "./types";
 import { parseSchemaVersion } from "./version";
 import { isValidRegexSyntax, isCatastrophicPattern } from "./safe-regex";
 import { collectShowIfDependencies, findShowIfCycle } from "./show-if";
+import {
+  isFieldTypeAllowed,
+  isVariantAllowed,
+  resolveFeatures,
+  type FormloomCapabilities,
+  type ResolvedFeatures,
+} from "./capabilities";
 
 /**
  * The major version this runtime supports, derived from
@@ -52,6 +59,13 @@ export interface ValidateOptions {
    *   schema with a field type only a newer runtime understands.
    */
   forwardCompat?: "strict" | "lenient";
+  /**
+   * Optional per-surface capabilities declaration. When provided, the
+   * validator enforces the host's subset: disallowed field types and
+   * features become validation errors in strict mode or silent drops /
+   * strips with warnings in lenient mode. Omit for v1.2 behaviour.
+   */
+  capabilities?: FormloomCapabilities;
 }
 
 /**
@@ -64,7 +78,9 @@ export function validateSchema(
   input: unknown,
   opts: ValidateOptions = {},
 ): ValidationResult {
-  const { forwardCompat = "strict" } = opts;
+  const { forwardCompat = "strict", capabilities } = opts;
+  const features: ResolvedFeatures | null =
+    capabilities === undefined ? null : resolveFeatures(capabilities);
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
   const droppedFields: string[] = [];
@@ -145,6 +161,31 @@ export function validateSchema(
       return;
     }
 
+    // Capability gate: disallowed field types behave the same as unknown types
+    // under the active forwardCompat mode so hosts get one consistent story.
+    if (
+      capabilities !== undefined &&
+      !isFieldTypeAllowed(capabilities, f.type as FieldType)
+    ) {
+      if (forwardCompat === "lenient") {
+        warnings.push({
+          path: `${prefix}.type`,
+          message: `Field type "${String(f.type)}" is not in capabilities.fieldTypes; dropped.`,
+        });
+        if (idOk && typeof f.id === "string") {
+          droppedFields.push(f.id);
+        }
+      } else {
+        errors.push({
+          path: `${prefix}.type`,
+          message: `Field type "${String(f.type)}" is not allowed by capabilities.fieldTypes (allowed: ${
+            capabilities.fieldTypes?.join(", ") ?? "none"
+          }).`,
+        });
+      }
+      return;
+    }
+
     if (idOk && typeof f.id === "string") {
       retainedFieldIds.add(f.id);
     }
@@ -181,6 +222,17 @@ export function validateSchema(
       });
     }
 
+    // Feature-level capability gates. In strict mode each triggers an error;
+    // in lenient mode the offending sub-property is silently stripped (or
+    // flipped off) and validation continues.
+    if (features !== null) {
+      checkFeatureCapabilities(f, prefix, features, forwardCompat, errors, warnings);
+    }
+    if (capabilities !== undefined) {
+      checkVariantCapability(f, prefix, capabilities, forwardCompat, errors, warnings);
+      checkMaxOptionsCapability(f, prefix, capabilities, forwardCompat, errors, warnings);
+    }
+
     switch (f.type) {
       case "text":
         validateTextField(f, prefix, errors);
@@ -213,8 +265,38 @@ export function validateSchema(
   );
   validateShowIfCycles(schema.fields as unknown[], errors);
 
-  if (schema.sections !== undefined) {
+  // Schema-level capability gates.
+  if (features !== null && features.sections === false && schema.sections !== undefined) {
+    if (forwardCompat === "lenient") {
+      warnings.push({
+        path: "sections",
+        message: "sections are not allowed by capabilities.features.sections; stripped.",
+      });
+    } else {
+      errors.push({
+        path: "sections",
+        message: "sections are not allowed by capabilities.features.sections.",
+      });
+    }
+  } else if (schema.sections !== undefined) {
     validateSections(schema.sections, retainedFieldIds, errors);
+  }
+
+  if (capabilities?.maxFields !== undefined) {
+    const count = (schema.fields as unknown[]).length;
+    if (count > capabilities.maxFields) {
+      if (forwardCompat === "lenient") {
+        warnings.push({
+          path: "fields",
+          message: `fields length ${count} exceeds capabilities.maxFields (${capabilities.maxFields}); trailing fields would be truncated.`,
+        });
+      } else {
+        errors.push({
+          path: "fields",
+          message: `fields length ${count} exceeds capabilities.maxFields (${capabilities.maxFields}).`,
+        });
+      }
+    }
   }
 
   return {
@@ -929,5 +1011,109 @@ function validateSections(
         message: `field "${fid}" is not assigned to any section. When sections is present, every field must belong to exactly one section.`,
       });
     }
+  }
+}
+
+// ---- Capability helpers ----
+
+function checkFeatureCapabilities(
+  f: Record<string, unknown>,
+  prefix: string,
+  features: ResolvedFeatures,
+  forwardCompat: "strict" | "lenient",
+  errors: ValidationError[],
+  warnings: ValidationWarning[],
+): void {
+  const report = (subpath: string, message: string): void => {
+    const path = `${prefix}.${subpath}`;
+    if (forwardCompat === "lenient") {
+      warnings.push({ path, message: `${message}; stripped.` });
+    } else {
+      errors.push({ path, message });
+    }
+  };
+
+  if (!features.showIf && f.showIf !== undefined) {
+    report("showIf", "showIf is not allowed by capabilities.features.showIf");
+  }
+  if (!features.allowCustom && f.allowCustom === true) {
+    report(
+      "allowCustom",
+      "allowCustom is not allowed by capabilities.features.allowCustom",
+    );
+  }
+  if (!features.readOnly && f.readOnly === true) {
+    report(
+      "readOnly",
+      "readOnly is not allowed by capabilities.features.readOnly",
+    );
+  }
+  if (!features.disabled && f.disabled === true) {
+    report(
+      "disabled",
+      "disabled is not allowed by capabilities.features.disabled",
+    );
+  }
+  if (!features.optionDescriptions && Array.isArray(f.options)) {
+    (f.options as unknown[]).forEach((opt, j) => {
+      if (opt !== null && typeof opt === "object") {
+        const o = opt as Record<string, unknown>;
+        if (typeof o.description === "string") {
+          report(
+            `options[${j}].description`,
+            "option descriptions are not allowed by capabilities.features.optionDescriptions",
+          );
+        }
+      }
+    });
+  }
+}
+
+function checkVariantCapability(
+  f: Record<string, unknown>,
+  prefix: string,
+  capabilities: FormloomCapabilities,
+  forwardCompat: "strict" | "lenient",
+  errors: ValidationError[],
+  warnings: ValidationWarning[],
+): void {
+  if (capabilities.variants === undefined) return;
+  if (f.hints === null || typeof f.hints !== "object") return;
+  const variant = (f.hints as Record<string, unknown>).variant;
+  if (typeof variant !== "string") return;
+  if (isVariantAllowed(capabilities, variant)) return;
+
+  const path = `${prefix}.hints.variant`;
+  const detail =
+    capabilities.variants === false
+      ? "capabilities.variants forbids all variants"
+      : `capabilities.variants allows only: ${capabilities.variants.join(", ")}`;
+  const message = `variant "${variant}" is not allowed (${detail})`;
+  if (forwardCompat === "lenient") {
+    warnings.push({ path, message: `${message}; stripped.` });
+  } else {
+    errors.push({ path, message });
+  }
+}
+
+function checkMaxOptionsCapability(
+  f: Record<string, unknown>,
+  prefix: string,
+  capabilities: FormloomCapabilities,
+  forwardCompat: "strict" | "lenient",
+  errors: ValidationError[],
+  warnings: ValidationWarning[],
+): void {
+  if (capabilities.maxOptions === undefined) return;
+  if (!Array.isArray(f.options)) return;
+  const count = (f.options as unknown[]).length;
+  if (count <= capabilities.maxOptions) return;
+
+  const path = `${prefix}.options`;
+  const message = `options length ${count} exceeds capabilities.maxOptions (${capabilities.maxOptions})`;
+  if (forwardCompat === "lenient") {
+    warnings.push({ path, message: `${message}; trailing options would be truncated.` });
+  } else {
+    errors.push({ path, message });
   }
 }
