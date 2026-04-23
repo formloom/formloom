@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" role="img" aria-label="Formloom demo: chat only vs Formloom form for a multi-field job application, 20-second loop.">
+  <title>Formloom demo: plain chat vs structured form</title>
+  <desc>A 20-second looping comparison. Left: an LLM tries to collect name, email, employment type, day rate, skills, and a resume by chat; it hits a validation error on the email and is still fighting about file upload at 20 seconds. Right: the same intake handed to a Formloom form, where a conditional day-rate field appears when Contract is picked, skills become chips, the resume is a file attachment, and the whole thing submits in roughly 15 seconds.</desc>
+
+  <defs>
+    <style>
+      .bg          { fill: #f8fafc; }
+      .headerBand  { fill: #ffffff; }
+      .headerLine  { stroke: #e2e8f0; stroke-width: 1; }
+      .titleL      { font: 700 14px system-ui, -apple-system, Segoe UI, sans-serif; fill: #dc2626; letter-spacing: 0.2px; }
+      .titleR      { font: 700 14px system-ui, -apple-system, Segoe UI, sans-serif; fill: #059669; letter-spacing: 0.2px; }
+      .subtitle    { font: 11px system-ui, -apple-system, Segoe UI, sans-serif; fill: #64748b; }
+      .divider     { stroke: #e2e8f0; stroke-width: 1; stroke-dasharray: 3 5; }
+
+      .bubbleBot    { fill: #f1f5f9; }
+      .bubbleBotTx  { font: 12px system-ui, -apple-system, Segoe UI, sans-serif; fill: #0f172a; }
+      .bubbleUser   { fill: #3b82f6; }
+      .bubbleUserTx { font: 12px system-ui, -apple-system, Segoe UI, sans-serif; fill: #ffffff; }
+      .tag          { font: 600 10px system-ui, -apple-system, Segoe UI, sans-serif; fill: #64748b; }
+
+      .stillGoing   { font: italic 11px system-ui, -apple-system, Segoe UI, sans-serif; fill: #dc2626; }
+      .stillGoingSm { font: italic 10px system-ui, -apple-system, Segoe UI, sans-serif; fill: #94a3b8; }
+
+      .card         { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1; }
+      .formTitle    { font: 700 13px system-ui, -apple-system, Segoe UI, sans-serif; fill: #0f172a; }
+      .fieldLabel   { font: 600 10.5px system-ui, -apple-system, Segoe UI, sans-serif; fill: #475569; letter-spacing: 0.3px; text-transform: uppercase; }
+      .fieldBox     { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1; }
+      .fieldBoxHot  { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; }
+      .fieldBoxDone { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1; }
+      .fieldHint    { font: 12px system-ui, -apple-system, Segoe UI, sans-serif; fill: #94a3b8; }
+      .fieldValue   { font: 12px system-ui, -apple-system, Segoe UI, sans-serif; fill: #0f172a; }
+      .fieldChip    { fill: #eef2ff; stroke: #c7d2fe; stroke-width: 1; }
+      .fieldChipTx  { font: 11px system-ui, -apple-system, Segoe UI, sans-serif; fill: #4338ca; }
+      .radioRing    { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .radioRingOn  { fill: #ffffff; stroke: #3b82f6; stroke-width: 1.5; }
+      .radioDot     { fill: #3b82f6; }
+      .radioLabel   { font: 12px system-ui, -apple-system, Segoe UI, sans-serif; fill: #0f172a; }
+      .conditional  { font: italic 10px system-ui, -apple-system, Segoe UI, sans-serif; fill: #6366f1; }
+
+      .btn          { fill: #3b82f6; }
+      .btnTx        { font: 700 11px system-ui, -apple-system, Segoe UI, sans-serif; fill: #ffffff; }
+
+      .checkCircle  { fill: #10b981; }
+      .checkStroke  { stroke: #ffffff; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .doneTx       { font: 600 12px system-ui, -apple-system, Segoe UI, sans-serif; fill: #065f46; }
+      .doneSub      { font: 11px system-ui, -apple-system, Segoe UI, sans-serif; fill: #047857; }
+
+      .caption      { font: italic 10px system-ui, -apple-system, Segoe UI, sans-serif; fill: #64748b; }
+    </style>
+
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect class="bg" width="880" height="560"/>
+
+  <!-- Header -->
+  <rect class="headerBand" x="0" y="0" width="880" height="52"/>
+  <line class="headerLine" x1="0" y1="52" x2="880" y2="52"/>
+
+  <text x="220" y="24" class="titleL" text-anchor="middle">Without Formloom</text>
+  <text x="220" y="42" class="subtitle" text-anchor="middle">LLM collects structured data through a plain chat</text>
+
+  <text x="660" y="24" class="titleR" text-anchor="middle">With Formloom</text>
+  <text x="660" y="42" class="subtitle" text-anchor="middle">Same intent, handed off to a structured form</text>
+
+  <!-- Vertical divider -->
+  <line x1="440" y1="52" x2="440" y2="560" class="divider"/>
+
+  <!-- ================================================================= -->
+  <!-- LEFT COLUMN: an AI-agent style conversation. Each bot reply is     -->
+  <!-- preceded by typing dots, and replies are phrased like an actual    -->
+  <!-- assistant (confirming, grouping questions, explaining next steps). -->
+  <!-- ================================================================= -->
+
+  <!-- Turn 1: user kicks off with a single natural-language request -->
+  <g opacity="0">
+    <rect x="60" y="68" rx="10" ry="10" width="340" height="26" class="bubbleUser"/>
+    <text x="230" y="85" class="bubbleUserTx" text-anchor="middle">Set up a weekly 1:1 with Sarah next Tuesday 2pm.</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.02;0.04;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 2: agent thinks, then replies asking for the email -->
+  <g opacity="0">
+    <rect x="20" y="107" rx="10" ry="10" width="48" height="20" class="bubbleBot"/>
+    <circle cx="32" cy="117" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" repeatCount="indefinite"/></circle>
+    <circle cx="44" cy="117" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.22s" repeatCount="indefinite"/></circle>
+    <circle cx="56" cy="117" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.44s" repeatCount="indefinite"/></circle>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.06;0.08;0.10;0.12;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+  <g opacity="0">
+    <rect x="20" y="104" rx="10" ry="10" width="300" height="26" class="bubbleBot"/>
+    <text x="30" y="121" class="bubbleBotTx">Got it. I'll need her email for the invite.</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.10;0.12;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 3: user fires off an incomplete email -->
+  <g opacity="0">
+    <rect x="310" y="140" rx="10" ry="10" width="90" height="26" class="bubbleUser"/>
+    <text x="355" y="157" class="bubbleUserTx" text-anchor="middle">sarah@acme</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.14;0.16;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 4: agent dots, then clarifying question about domain -->
+  <g opacity="0">
+    <rect x="20" y="179" rx="10" ry="10" width="48" height="20" class="bubbleBot"/>
+    <circle cx="32" cy="189" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" repeatCount="indefinite"/></circle>
+    <circle cx="44" cy="189" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.22s" repeatCount="indefinite"/></circle>
+    <circle cx="56" cy="189" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.44s" repeatCount="indefinite"/></circle>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.18;0.20;0.22;0.24;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+  <g opacity="0">
+    <rect x="20" y="176" rx="10" ry="10" width="330" height="26" class="bubbleBot"/>
+    <text x="30" y="193" class="bubbleBotTx">That looks incomplete. Is it @acme.com or @acme.co?</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.22;0.24;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 5: user completes email -->
+  <g opacity="0">
+    <rect x="290" y="212" rx="10" ry="10" width="110" height="26" class="bubbleUser"/>
+    <text x="345" y="229" class="bubbleUserTx" text-anchor="middle">sarah@acme.co</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.26;0.28;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 6: agent dots, then asks about time zone -->
+  <g opacity="0">
+    <rect x="20" y="251" rx="10" ry="10" width="48" height="20" class="bubbleBot"/>
+    <circle cx="32" cy="261" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" repeatCount="indefinite"/></circle>
+    <circle cx="44" cy="261" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.22s" repeatCount="indefinite"/></circle>
+    <circle cx="56" cy="261" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.44s" repeatCount="indefinite"/></circle>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.30;0.32;0.34;0.36;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+  <g opacity="0">
+    <rect x="20" y="248" rx="10" ry="10" width="210" height="26" class="bubbleBot"/>
+    <text x="30" y="265" class="bubbleBotTx">Is 2 PM Pacific time?</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.34;0.36;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 7: user confirms time zone -->
+  <g opacity="0">
+    <rect x="310" y="284" rx="10" ry="10" width="90" height="26" class="bubbleUser"/>
+    <text x="355" y="301" class="bubbleUserTx" text-anchor="middle">yes Pacific</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.38;0.40;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 8: agent dots, asks duration -->
+  <g opacity="0">
+    <rect x="20" y="323" rx="10" ry="10" width="48" height="20" class="bubbleBot"/>
+    <circle cx="32" cy="333" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" repeatCount="indefinite"/></circle>
+    <circle cx="44" cy="333" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.22s" repeatCount="indefinite"/></circle>
+    <circle cx="56" cy="333" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.44s" repeatCount="indefinite"/></circle>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.42;0.44;0.46;0.48;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+  <g opacity="0">
+    <rect x="20" y="320" rx="10" ry="10" width="290" height="26" class="bubbleBot"/>
+    <text x="30" y="337" class="bubbleBotTx">And how long should the meeting be?</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.46;0.48;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 9: user answers duration -->
+  <g opacity="0">
+    <rect x="330" y="356" rx="10" ry="10" width="70" height="26" class="bubbleUser"/>
+    <text x="365" y="373" class="bubbleUserTx" text-anchor="middle">30 min</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.50;0.52;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 10: agent dots, asks recurrence length -->
+  <g opacity="0">
+    <rect x="20" y="395" rx="10" ry="10" width="48" height="20" class="bubbleBot"/>
+    <circle cx="32" cy="405" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" repeatCount="indefinite"/></circle>
+    <circle cx="44" cy="405" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.22s" repeatCount="indefinite"/></circle>
+    <circle cx="56" cy="405" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.44s" repeatCount="indefinite"/></circle>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.54;0.56;0.58;0.60;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+  <g opacity="0">
+    <rect x="20" y="392" rx="10" ry="10" width="310" height="26" class="bubbleBot"/>
+    <text x="30" y="409" class="bubbleBotTx">Last one, for how many weeks should it run?</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.58;0.60;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Turn 11: user still typing, conversation unresolved -->
+  <g opacity="0">
+    <rect x="340" y="430" rx="10" ry="10" width="60" height="22" class="bubbleUser"/>
+    <circle cx="355" cy="441" r="2.5" fill="#ffffff">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="370" cy="441" r="2.5" fill="#ffffff">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" begin="0.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="385" cy="441" r="2.5" fill="#ffffff">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" begin="0.4s" repeatCount="indefinite"/>
+    </circle>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.64;0.66;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- ================================================================= -->
+  <!-- RIGHT COLUMN: Formloom form                                        -->
+  <!-- ================================================================= -->
+
+  <!-- Agent dots before intro -->
+  <g opacity="0">
+    <rect x="460" y="71" rx="10" ry="10" width="48" height="20" class="bubbleBot"/>
+    <circle cx="472" cy="81" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" repeatCount="indefinite"/></circle>
+    <circle cx="484" cy="81" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.22s" repeatCount="indefinite"/></circle>
+    <circle cx="496" cy="81" r="2.2" fill="#64748b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.1s" begin="0.44s" repeatCount="indefinite"/></circle>
+    <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;0.01;0.02;0.04;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Bot intro -->
+  <g opacity="0">
+    <rect x="460" y="68" rx="10" ry="10" width="300" height="26" class="bubbleBot"/>
+    <text x="470" y="85" class="bubbleBotTx">Let me put that in a form for you:</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.02;0.04;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Form card (fades + slides in, grows when the End-after field is inserted) -->
+  <g opacity="0">
+    <rect x="460" y="108" rx="12" ry="12" width="400" height="360" class="card" filter="url(#cardShadow)">
+      <animate attributeName="height" values="360;360;420;420" keyTimes="0;0.28;0.32;1" dur="20s" repeatCount="indefinite"/>
+    </rect>
+    <text x="480" y="133" class="formTitle">Schedule a meeting</text>
+
+    <!-- TITLE field -->
+    <text x="480" y="156" class="fieldLabel">Title</text>
+    <g>
+      <rect x="480" y="162" rx="6" ry="6" width="360" height="32" class="fieldBox"/>
+      <text x="492" y="182" class="fieldHint">e.g. 1:1 with Sarah</text>
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.08;0.10;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+    <g opacity="0">
+      <rect x="480" y="162" rx="6" ry="6" width="360" height="32" class="fieldBoxHot"/>
+      <text x="492" y="182" class="fieldValue">1:1 with Sarah Chen</text>
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.10;0.11;0.13;0.14;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+    <g opacity="0">
+      <rect x="480" y="162" rx="6" ry="6" width="360" height="32" class="fieldBoxDone"/>
+      <text x="492" y="182" class="fieldValue">1:1 with Sarah Chen</text>
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.13;0.14;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- ATTENDEES field (chip-style multi-value) -->
+    <text x="480" y="212" class="fieldLabel">Attendees</text>
+    <rect x="480" y="218" rx="6" ry="6" width="360" height="32" class="fieldBoxDone"/>
+    <g opacity="0">
+      <rect x="488" y="224" rx="10" ry="10" width="108" height="20" class="fieldChip"/>
+      <text x="542" y="238" class="fieldChipTx" text-anchor="middle">sarah@acme.co</text>
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.15;0.17;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- START (date and time) -->
+    <text x="480" y="268" class="fieldLabel">Start</text>
+    <g>
+      <rect x="480" y="274" rx="6" ry="6" width="360" height="32" class="fieldBox"/>
+      <text x="492" y="294" class="fieldHint">yyyy-mm-dd, hh:mm, timezone</text>
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.18;0.20;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+    <g opacity="0">
+      <rect x="480" y="274" rx="6" ry="6" width="360" height="32" class="fieldBoxDone"/>
+      <text x="492" y="294" class="fieldValue">2026-05-12  ·  14:00  ·  PST</text>
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.20;0.22;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- DURATION (number) -->
+    <text x="480" y="324" class="fieldLabel">Duration (minutes)</text>
+    <g>
+      <rect x="480" y="330" rx="6" ry="6" width="360" height="32" class="fieldBox"/>
+      <text x="492" y="350" class="fieldHint">30</text>
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.22;0.24;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+    <g opacity="0">
+      <rect x="480" y="330" rx="6" ry="6" width="360" height="32" class="fieldBoxDone"/>
+      <text x="492" y="350" class="fieldValue">30</text>
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.24;0.26;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- REPEAT radios -->
+    <text x="480" y="380" class="fieldLabel">Repeat</text>
+    <!-- Once option (stays unpicked) -->
+    <g>
+      <circle cx="492" cy="398" r="6" class="radioRing"/>
+      <text x="508" y="402" class="radioLabel">Once</text>
+    </g>
+    <!-- Weekly option (gets picked around 54%) -->
+    <g>
+      <circle cx="572" cy="398" r="6" class="radioRing">
+        <animate attributeName="stroke" values="#cbd5e1;#cbd5e1;#3b82f6;#3b82f6" keyTimes="0;0.26;0.28;1" dur="20s" repeatCount="indefinite"/>
+      </circle>
+      <text x="588" y="402" class="radioLabel">Weekly</text>
+    </g>
+    <!-- Weekly's inner dot fades in -->
+    <circle cx="572" cy="398" r="3" class="radioDot" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.27;0.28;1" dur="20s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Monthly option (stays unpicked) -->
+    <g>
+      <circle cx="664" cy="398" r="6" class="radioRing"/>
+      <text x="680" y="402" class="radioLabel">Monthly</text>
+    </g>
+
+    <!-- End-after field (conditional, appears when Weekly is picked) -->
+    <g opacity="0">
+      <text x="480" y="424" class="fieldLabel">End after</text>
+      <rect x="480" y="430" rx="6" ry="6" width="360" height="32" class="fieldBoxDone"/>
+      <text x="492" y="450" class="fieldValue">4 weeks</text>
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.28;0.32;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- Shift-down group: Submit, translate 0,60 when the conditional End-after appears -->
+    <g>
+      <g opacity="0">
+        <rect x="680" y="414" rx="6" ry="6" width="160" height="32" class="btn">
+          <animate attributeName="opacity" values="1;0.65;1" keyTimes="0;0.5;1" dur="0.6s" begin="6.6s" repeatCount="2"/>
+        </rect>
+        <text x="760" y="434" class="btnTx" text-anchor="middle">Schedule meeting</text>
+        <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.25;0.27;1" dur="20s" repeatCount="indefinite"/>
+      </g>
+
+      <animateTransform attributeName="transform" type="translate"
+        values="0,0;0,0;0,60;0,60" keyTimes="0;0.28;0.32;1" dur="20s" repeatCount="indefinite"/>
+    </g>
+
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.04;0.08;0.38;0.42;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- Success state bubble (replaces the form) -->
+  <g opacity="0">
+    <rect x="460" y="180" rx="12" ry="12" width="400" height="120" fill="#ecfdf5" stroke="#86efac" stroke-width="1" filter="url(#cardShadow)"/>
+    <circle cx="500" cy="220" r="16" class="checkCircle"/>
+    <polyline points="492,220 498,226 510,212" class="checkStroke"/>
+    <text x="526" y="216" class="doneTx">Meeting scheduled.</text>
+    <text x="526" y="234" class="doneSub">Invite sent to sarah@acme.co for 4 weeks.</text>
+    <rect x="526" y="248" rx="5" ry="5" width="220" height="22" fill="#d1fae5"/>
+    <text x="536" y="263" class="doneSub" style="font-size: 10px; font-weight: 600;">Tue 2:00 PM PST, 30 min, weekly</text>
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.40;0.42;1" dur="20s" repeatCount="indefinite"/>
+  </g>
+
+</svg>

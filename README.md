@@ -10,6 +10,10 @@
 > **Some moments are better served by a dropdown than a dialogue.**
 > Formloom lets your LLM hand the user a real UI mid-conversation, when the moment calls for one, and pick the chat back up when it's done.
 
+<p align="center">
+  <img src="./docs/assets/demo.svg" alt="Formloom demo: the same user request ('set up a weekly 1:1 with Sarah next Tuesday 2pm') handled by a plain LLM chat on the left and by a Formloom-generated form on the right. The chat loops through email validation, time zone clarification, duration, and recurrence length with a typing indicator before each reply. The form on the right fills every field in one pass, pops a conditional End after field when Weekly is picked, and submits a scheduled meeting in about 8 seconds while the chat is still going. Animated 20-second loop." width="820">
+</p>
+
 ---
 
 ## What it feels like, with Formloom
