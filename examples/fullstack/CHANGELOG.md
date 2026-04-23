@@ -1,5 +1,14 @@
 # @formloom/example-fullstack
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`6ce0841`](https://github.com/formloom/formloom/commit/6ce0841ec223a4fe6696c68f23bb4879f78beabb)]:
+  - @formloom/schema@0.4.0
+  - @formloom/llm@0.4.0
+  - @formloom/react@0.3.1
+
 ## 0.0.2
 
 ### Patch Changes
