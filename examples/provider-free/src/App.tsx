@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
-import type { FormloomData, FormloomSchema } from "@formloom/schema";
-import { formatSubmission } from "@formloom/llm";
+import type {
+  FormloomCapabilities,
+  FormloomData,
+  FormloomSchema,
+} from "@formloom/schema";
+import { createFormloomCapabilities, formatSubmission } from "@formloom/llm";
 import { FormloomRenderer } from "./FormloomRenderer";
 import { schemaLibrary } from "./schema-library";
 import { toolCallPath } from "./paths/tool-call-path";
@@ -9,13 +13,29 @@ import { textPromptPath } from "./paths/text-prompt-path";
 
 type SchemaKey = keyof typeof schemaLibrary;
 type PathKey = "tool-call" | "response-format" | "text-prompt";
+type CapabilityKey = "full" | "text-only" | "no-file-no-conditional";
+
+const capabilityPresets: Record<CapabilityKey, FormloomCapabilities> = {
+  full: {},
+  "text-only": { fieldTypes: ["text"] },
+  "no-file-no-conditional": {
+    fieldTypes: ["text", "boolean", "radio", "select", "date", "number"],
+    features: { showIf: false },
+  },
+};
 
 export default function App() {
   const [schemaKey, setSchemaKey] = useState<SchemaKey>("jobApplication");
   const [pathKey, setPathKey] = useState<PathKey>("tool-call");
+  const [capabilityKey, setCapabilityKey] = useState<CapabilityKey>("full");
   const [submitted, setSubmitted] = useState<FormloomData | null>(null);
 
   const baseSchema: FormloomSchema = schemaLibrary[schemaKey];
+
+  const bundle = useMemo(
+    () => createFormloomCapabilities(capabilityPresets[capabilityKey]),
+    [capabilityKey],
+  );
 
   const simulated = useMemo(() => {
     switch (pathKey) {
@@ -28,7 +48,17 @@ export default function App() {
     }
   }, [baseSchema, pathKey]);
 
-  const parsedSchema = simulated.result.success ? simulated.result.schema : null;
+  // Re-parse the simulated LLM output through the bundle so the validator
+  // enforces the active capability profile. When the schema violates caps
+  // we fall through to the error panel below.
+  const capabilityCheck = useMemo(() => {
+    if (!simulated.result.success || simulated.result.schema === null) {
+      return simulated.result;
+    }
+    return bundle.parse(simulated.result.schema);
+  }, [bundle, simulated]);
+
+  const parsedSchema = capabilityCheck.success ? capabilityCheck.schema : null;
 
   const submissionPreview = useMemo(() => {
     if (submitted === null) return null;
@@ -65,12 +95,27 @@ export default function App() {
         }}
       />
 
-      <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
+      <PickerRow
+        label="Caps"
+        options={["full", "text-only", "no-file-no-conditional"]}
+        value={capabilityKey}
+        onChange={(v) => {
+          setCapabilityKey(v as CapabilityKey);
+          setSubmitted(null);
+        }}
+      />
+
+      <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
         Simulating: <strong>{simulated.label}</strong>
       </div>
 
+      <CapabilitiesSummary
+        caps={capabilityPresets[capabilityKey]}
+        promptLength={bundle.systemPrompt.length}
+      />
+
       {parsedSchema === null ? (
-        <ErrorPanel errors={simulated.result.errors} />
+        <ErrorPanel errors={capabilityCheck.errors.length > 0 ? capabilityCheck.errors : simulated.result.errors} />
       ) : (
         <div style={{ padding: 24, border: "1px solid #e5e7eb", borderRadius: 12, background: "#fafafa" }}>
           <FormloomRenderer
@@ -151,6 +196,48 @@ function ErrorPanel({ errors }: { errors: string[] }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function CapabilitiesSummary({
+  caps,
+  promptLength,
+}: {
+  caps: FormloomCapabilities;
+  promptLength: number;
+}) {
+  const descriptors: string[] = [];
+  if (caps.fieldTypes !== undefined) {
+    descriptors.push(`fieldTypes: ${caps.fieldTypes.join(", ")}`);
+  }
+  if (caps.features !== undefined) {
+    const off = Object.entries(caps.features)
+      .filter(([, v]) => v === false)
+      .map(([k]) => k);
+    if (off.length > 0) descriptors.push(`features off: ${off.join(", ")}`);
+  }
+  if (caps.variants === false) descriptors.push("variants: forbidden");
+  else if (Array.isArray(caps.variants))
+    descriptors.push(`variants: ${caps.variants.join(", ")}`);
+
+  const summary = descriptors.length === 0 ? "full (no restrictions)" : descriptors.join(" · ");
+
+  return (
+    <div
+      style={{
+        fontSize: 12,
+        color: "#475569",
+        marginBottom: 16,
+        padding: "8px 12px",
+        background: "#f1f5f9",
+        borderRadius: 6,
+      }}
+    >
+      <strong>Active capabilities:</strong> {summary}
+      <span style={{ marginLeft: 12, color: "#64748b" }}>
+        prompt: {promptLength.toLocaleString()} chars
+      </span>
     </div>
   );
 }

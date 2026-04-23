@@ -42,6 +42,15 @@ export type {
 // Custom-value helpers (radio/select with allowCustom)
 export { resolveMultiSelectValue, isRadioCustomValue } from "./resolve-custom";
 
+// Capabilities
+export {
+  FULL_CAPABILITIES,
+  resolveFeatures,
+  isFieldTypeAllowed,
+  isVariantAllowed,
+} from "./capabilities";
+export type { FormloomCapabilities, ResolvedFeatures } from "./capabilities";
+
 // showIf
 export { evaluateShowIf, collectShowIfDependencies, findShowIfCycle } from "./show-if";
 

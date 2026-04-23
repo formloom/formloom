@@ -188,6 +188,24 @@ validateSchema(schema, { forwardCompat: "lenient" });
 // → `"strict"` (default) errors out
 ```
 
+### Capabilities (v1.3)
+
+Pass a `FormloomCapabilities` object to restrict what the schema may contain on a given surface. Disallowed field types and features become validation errors in strict mode or silent drops with warnings in lenient mode (same knob as `forwardCompat`).
+
+```ts
+validateSchema(schema, {
+  capabilities: {
+    fieldTypes: ["text", "select", "boolean"],   // no file, number, date, radio
+    features: { showIf: false },                 // reject conditional fields
+    variants: ["combobox"],                      // hints.variant allowlist
+    maxFields: 7,
+  },
+  forwardCompat: "strict",
+});
+```
+
+Omit any key to allow it (omit = permissive). The error paths match the existing convention (`fields[2].type`, `fields[0].hints.variant`, etc.) so surfaces are greppable. For the ergonomic path — narrowing the system prompt and tool JSON Schema from the same declaration — use `createFormloomCapabilities` in `@formloom/llm`.
+
 ## Versioning
 
 Any `1.x` version string is accepted. Export constants:
@@ -280,6 +298,9 @@ import type {
   CanonicalHints, CanonicalHintEntry, CanonicalDisplayHint, CanonicalWidthHint,
   FieldHints,
   ShowIfRule,
+
+  // Capabilities (v1.3)
+  FormloomCapabilities, ResolvedFeatures,
 
   // Validator
   ValidationResult, ValidationError, ValidationWarning, ValidateOptions,

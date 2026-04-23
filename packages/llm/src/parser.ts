@@ -1,10 +1,20 @@
-import type { FormloomSchema } from "@formloom/schema";
+import type { FormloomCapabilities, FormloomSchema } from "@formloom/schema";
 import { validateSchema } from "@formloom/schema";
 
 export interface ParseResult {
   success: boolean;
   schema: FormloomSchema | null;
   errors: string[];
+}
+
+/**
+ * Optional parser tuning. When `capabilities` is provided, the extracted
+ * schema is also validated against the per-surface subset declared by the
+ * host. `forwardCompat` is passed straight through to {@link validateSchema}.
+ */
+export interface ParseOptions {
+  forwardCompat?: "strict" | "lenient";
+  capabilities?: FormloomCapabilities;
 }
 
 /**
@@ -19,15 +29,18 @@ export interface ParseResult {
  *   5. The first `{ ... }` block in free-form prose — last-resort fallback
  *      for models that ignore the code-fence instructions.
  */
-export function parseFormloomResponse(input: unknown): ParseResult {
+export function parseFormloomResponse(
+  input: unknown,
+  opts: ParseOptions = {},
+): ParseResult {
   if (input !== null && typeof input === "object" && !Array.isArray(input)) {
-    return validateAndReturn(input);
+    return validateAndReturn(input, opts);
   }
 
   if (typeof input === "string") {
     const extracted = extractJSON(input);
     if (extracted !== null) {
-      return validateAndReturn(extracted);
+      return validateAndReturn(extracted, opts);
     }
     return {
       success: false,
@@ -93,8 +106,11 @@ function tryParse(body: string): unknown | null {
   }
 }
 
-function validateAndReturn(obj: unknown): ParseResult {
-  const result = validateSchema(obj);
+function validateAndReturn(obj: unknown, opts: ParseOptions): ParseResult {
+  const result = validateSchema(obj, {
+    forwardCompat: opts.forwardCompat,
+    capabilities: opts.capabilities,
+  });
   if (result.valid) {
     return { success: true, schema: obj as FormloomSchema, errors: [] };
   }

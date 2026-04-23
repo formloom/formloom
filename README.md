@@ -257,6 +257,7 @@ Provider tool exports shipped today:
 - Async field validators in React (debounced, abortable, flushed on submit)
 - Live-sync hook `onValueChange` to stream partial answers to an LLM while the user types
 - Custom widget variants via `hints.variant` — host-defined, opaque, declaration-mergeable
+- Capability profiles — one declaration narrows the system prompt, tool JSON Schema, and validator per surface
 - ReDoS-safe regex handling for LLM-authored patterns
 - Zod and Standard Schema adapters for server-side parity
 
