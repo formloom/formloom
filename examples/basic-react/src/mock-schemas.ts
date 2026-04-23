@@ -286,10 +286,132 @@ export const onboardingWizardSchema: FormloomSchema = {
   submitLabel: "Finish onboarding",
 };
 
+export const hintsShowcaseSchema: FormloomSchema = {
+  version: "1.2",
+  title: "Rendering hints tour",
+  description:
+    "Every canonical hint in one form: textarea, password, toggle, stepper, width, autocomplete.",
+  fields: [
+    {
+      id: "account_email",
+      type: "text",
+      label: "Email",
+      placeholder: "you@example.com",
+      hints: { autocomplete: "email", width: "half" },
+      validation: {
+        required: true,
+        pattern: "^[^@]+@[^@]+\\.[^@]+$",
+        patternMessage: "Enter a valid email",
+      },
+    },
+    {
+      id: "account_password",
+      type: "text",
+      label: "Password",
+      hints: { display: "password", width: "half", autocomplete: "new-password" },
+      validation: { required: true },
+    },
+    {
+      id: "street",
+      type: "text",
+      label: "Street address",
+      hints: { autocomplete: "street-address" },
+    },
+    {
+      id: "marketing_opt_in",
+      type: "boolean",
+      label: "Send me product updates",
+      hints: { display: "toggle" },
+      defaultValue: false,
+    },
+    {
+      id: "seats",
+      type: "number",
+      label: "Seats",
+      hints: { display: "stepper" },
+      validation: { min: 1, max: 20, integer: true, required: true },
+      defaultValue: 3,
+    },
+    {
+      id: "notes",
+      type: "text",
+      label: "Notes",
+      placeholder: "Anything else we should know?",
+      hints: { display: "textarea", rows: 4 },
+    },
+  ],
+  submitLabel: "Save preferences",
+};
+
+export const asyncValidationSchema: FormloomSchema = {
+  version: "1.2",
+  title: "Pick a username",
+  description:
+    "Demonstrates async validators — the username check runs against a mock registry (try 'alice' or 'bob').",
+  fields: [
+    {
+      id: "username",
+      type: "text",
+      label: "Username",
+      placeholder: "Your chosen handle",
+      validation: {
+        required: true,
+        pattern: "^[a-z0-9_]{3,20}$",
+        patternMessage: "3-20 chars, lowercase letters / numbers / underscore",
+      },
+    },
+    {
+      id: "display_name",
+      type: "text",
+      label: "Display name",
+    },
+  ],
+  submitLabel: "Claim username",
+};
+
+export const reviewModeSchema: FormloomSchema = {
+  version: "1.2",
+  title: "Order summary",
+  description:
+    "Read-only + disabled state demo. The billing address is locked (disabled); the account id is a display-only summary (readOnly).",
+  fields: [
+    {
+      id: "account_id",
+      type: "text",
+      label: "Account ID",
+      defaultValue: "acct_9f4ce2",
+      readOnly: true,
+      description: "Tied to your workspace — can't be edited here.",
+    },
+    {
+      id: "plan",
+      type: "radio",
+      label: "Plan",
+      options: [
+        { value: "starter", label: "Starter", description: "Up to 5 seats" },
+        { value: "pro", label: "Pro", description: "Up to 25 seats" },
+      ],
+      defaultValue: "pro",
+    },
+    {
+      id: "billing_address",
+      type: "text",
+      label: "Billing address",
+      defaultValue: "500 Market St, San Francisco",
+      disabled: true,
+      description: "Edit from the billing portal (disabled here).",
+    },
+  ],
+  submitLabel: "Confirm order",
+};
+
 export const schemas = {
   contact: contactSchema,
   feedback: feedbackSchema,
   booking: bookingSchema,
   jobApplication: jobApplicationSchema,
   onboardingWizard: onboardingWizardSchema,
+  hintsShowcase: hintsShowcaseSchema,
+  asyncValidation: asyncValidationSchema,
+  reviewMode: reviewModeSchema,
 } as const;

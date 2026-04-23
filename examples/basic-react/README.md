@@ -1,28 +1,23 @@
 # Basic React Example
 
-A minimal demo that renders Formloom schemas using the headless `useFormloom` hook. No LLM involved — uses hardcoded mock schemas to demonstrate the rendering layer in isolation.
+A minimal demo that renders Formloom schemas using the headless React hooks. No LLM involved — uses hardcoded mock schemas so the rendering layer can be studied in isolation.
 
-## What it does
+## What it demonstrates
 
-- Five pre-built form schemas: **Contact**, **Feedback**, **Booking**, **Job Application**, and **Onboarding Wizard**
-- Switch between them using the buttons at the top
-- Fill out fields, see touch-based validation (errors appear after you leave a field)
-- On submit, the raw `FormloomData` JSON is displayed below the form
-- A "Reset" button appears once any field has been interacted with
-- The **Job Application** schema demonstrates v1.1 features: `number` and `file` fields, `showIf` conditional visibility, `sections`, and the `hints` registry (`display: "textarea"`)
-- The **Onboarding Wizard** schema demonstrates v1.2 features: two-line option descriptions, `allowCustom` "Other…" input on radio + multi-select, `hints.variant` for custom widgets, and a `readOnly` account-id field rendered as a summary
+Every feature in `@formloom/schema` and `@formloom/react` that doesn't require an LLM:
 
-## How it works
+- All seven field-type primitives (`text`, `boolean`, `radio`, `select`, `date`, `number`, `file`)
+- Validation: required, pattern, patternMessage, min/max/step/integer
+- Conditional visibility via `showIf` (`equals`, composed rules)
+- Sections grouping
+- Every canonical rendering hint: `display: "textarea" | "password" | "toggle" | "stepper"`, `width: "half" | "third"`, `rows`, `autocomplete`, `variant`
+- v1.2 schema features: `FieldOption.description`, `allowCustom` on radio / multi-select, `readOnly`, `disabled`
+- `useFormloom` hook with `onValueChange` live-state callback
+- `useFormloomWizard` — multi-step stepper with progress strip and validation-gated next/back/skip
+- Async validators (debounced, abortable) — exercised by the "Async" schema
+- File uploads via `adaptFileList`
 
-| File | Role |
-|------|------|
-| [src/mock-schemas.ts](src/mock-schemas.ts) | Five hardcoded `FormloomSchema` objects simulating LLM output |
-| [src/FormloomRenderer.tsx](src/FormloomRenderer.tsx) | Calls `useFormloom` hook and maps each of the 7 field types to plain HTML inputs, honours `sections`, `visibleFields`, `custom` (for allowCustom), and `state.readOnly` / `state.disabled` |
-| [src/App.tsx](src/App.tsx) | Schema switcher + displays submitted data as JSON |
-
-The renderer is the key file — it shows how a headless hook gets wired to actual UI. The hook provides `state`, `onChange`, `onBlur`, and `visible` per field; the renderer decides what HTML to render based on `field.type` and any `hints`.
-
-## Running
+## How to run
 
 From the repo root:
 
@@ -34,6 +29,17 @@ pnpm --filter @formloom/example-basic-react dev
 
 Opens at `http://localhost:5173`.
 
+## How it works
+
+| File | Role |
+|------|------|
+| [src/mock-schemas.ts](src/mock-schemas.ts) | Eight `FormloomSchema` objects simulating LLM output — every feature covered |
+| [src/FormloomRenderer.tsx](src/FormloomRenderer.tsx) | `useFormloom`-based flat renderer. Maps each field type to plain HTML, honours `sections`, `visibleFields`, `state.readOnly` / `state.disabled`, `FieldProps.custom`, and every canonical hint. `FieldBody` is exported for reuse by the wizard. |
+| [src/WizardRenderer.tsx](src/WizardRenderer.tsx) | `useFormloomWizard`-based stepper. Progress strip, Back / Next / Skip buttons, validation-gated transitions, final-step submit. |
+| [src/App.tsx](src/App.tsx) | Schema switcher + wizard-mode toggle + live `onValueChange` JSON panel + submitted-data JSON panel. Wires the async validator for the "Async" schema. |
+
+The App exposes a **wizard-mode toggle** for any schema that declares `sections` — flip it to switch the same schema between the flat renderer and the stepper.
+
 ## Schemas included
 
 | Schema | Demonstrates |
@@ -41,5 +47,12 @@ Opens at `http://localhost:5173`.
 | **Contact** | Text fields with regex validation, radio, boolean |
 | **Feedback** | Radio rating, multi-select, text, boolean |
 | **Booking** | Select, date picker, text |
-| **Job Application** | **v1.1 features** — number + file fields, `showIf` (contract rate appears when employment is "Contract"), sections, textarea hint for the bio |
-| **Onboarding Wizard** | **v1.2 features** — option descriptions, `allowCustom` radio ("What CRM?" with Other…), multi-select with freeform tags, `hints.variant: "tool-select"`, and a `readOnly` account-ID field |
+| **Job App** | Number + file fields, `showIf` (contract rate appears when employment is "Contract"), sections, textarea hint for the bio |
+| **Onboarding** | Two-line option descriptions, `allowCustom` radio + multi-select with freeform tags, `hints.variant: "tool-select"`, a `readOnly` Account ID, and sections — toggle **Wizard mode** to see `useFormloomWizard` |
+| **Hints tour** | Every canonical hint: password + email autocomplete in a half-width pair, toggle, stepper, width `half`/`third`, textarea with `rows` |
+| **Async** | Debounced async validator — try `alice` or `bob` to see it reject; any other value passes after ~450 ms |
+| **Review** | `readOnly` (plain-text summary) + `disabled` (locked input) states in the same form |
+
+## The "Live form state" panel
+
+When Wizard mode is off, the app shows a live JSON panel fed by the hook's `onValueChange` option. This is the same mechanism a host would use to stream partial answers to an LLM context while the user types — see [packages/react/README.md](../../packages/react/README.md) for the debounced-userland pattern.

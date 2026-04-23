@@ -1,15 +1,17 @@
 import type { FormloomSchema } from "@formloom/schema";
 
 /**
- * A hand-rolled library of schemas that exercise every v1.1 feature. Used to
- * simulate LLM output without calling an API — the provider-free demo picks
+ * A hand-rolled library of schemas that simulate LLM output. The demo picks
  * from this list and pretends it came from OpenAI / Anthropic / a text model.
+ * Covers every schema feature end-to-end across the three LLM integration
+ * paths — schema validator + parser see the same shapes a real model emits.
  */
 export const schemaLibrary: Record<string, FormloomSchema> = {
   jobApplication: {
-    version: "1.1",
+    version: "1.2",
     title: "Job application",
-    description: "Covers number + file fields, showIf, sections, and hints.",
+    description:
+      "Covers number + file fields, showIf, sections, hints, and v1.2 option descriptions.",
     fields: [
       { id: "full_name", type: "text", label: "Full name", validation: { required: true } },
       {
@@ -33,8 +35,16 @@ export const schemaLibrary: Record<string, FormloomSchema> = {
         type: "radio",
         label: "Employment type",
         options: [
-          { value: "full_time", label: "Full-time" },
-          { value: "contract", label: "Contract" },
+          {
+            value: "full_time",
+            label: "Full-time",
+            description: "Salary plus benefits",
+          },
+          {
+            value: "contract",
+            label: "Contract",
+            description: "Invoiced by the day — answer the rate question below",
+          },
         ],
         validation: { required: true },
       },
@@ -68,8 +78,52 @@ export const schemaLibrary: Record<string, FormloomSchema> = {
     submitLabel: "Submit application",
   },
 
+  crmOnboarding: {
+    version: "1.2",
+    title: "CRM onboarding",
+    description:
+      "v1.2 features end-to-end: allowCustom on radio + multi-select, hints.variant, readOnly.",
+    fields: [
+      {
+        id: "account_id",
+        type: "text",
+        label: "Account ID",
+        defaultValue: "acct_8a4d2e",
+        readOnly: true,
+        description: "Assigned by the workspace.",
+      },
+      {
+        id: "crm",
+        type: "radio",
+        label: "Which CRM do you use?",
+        options: [
+          { value: "salesforce", label: "Salesforce" },
+          { value: "hubspot", label: "HubSpot" },
+          { value: "pipedrive", label: "Pipedrive" },
+        ],
+        allowCustom: true,
+        customLabel: "Other CRM",
+        customPlaceholder: "e.g. Zoho",
+      },
+      {
+        id: "integrations",
+        type: "select",
+        label: "Which tools should we connect?",
+        multiple: true,
+        options: [
+          { value: "slack", label: "Slack" },
+          { value: "notion", label: "Notion" },
+          { value: "linear", label: "Linear" },
+        ],
+        allowCustom: true,
+        hints: { variant: "tool-select" },
+      },
+    ],
+    submitLabel: "Finish setup",
+  },
+
   appointmentBooking: {
-    version: "1.1",
+    version: "1.2",
     title: "Appointment booking",
     fields: [
       {
@@ -101,7 +155,7 @@ export const schemaLibrary: Record<string, FormloomSchema> = {
   },
 
   contactPreferences: {
-    version: "1.1",
+    version: "1.2",
     title: "Contact preferences",
     fields: [
       { id: "name", type: "text", label: "Name", validation: { required: true } },
